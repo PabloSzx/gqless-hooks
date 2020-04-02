@@ -1,10 +1,9 @@
 # gqless-hooks
 
 [![npm version](https://badge.fury.io/js/gqless-hooks.svg)](https://badge.fury.io/js/gqless-hooks)
-
 [![bundlephobia](https://badgen.net/bundlephobia/minzip/gqless-hooks)](https://bundlephobia.com/result?p=gqless-hooks)
-
 [![license](https://badgen.net/github/license/pabloszx/gqless-hooks)](https://github.com/pabloszx/gqless-hooks)
+[![combined statuses](https://badgen.net/github/status/pabloszx/gqless-hooks)](https://github.com/pabloszx/gqless-hooks)
 
 ```sh
 yarn add gqless-hooks
@@ -81,5 +80,5 @@ If you are only using these hooks and not the default **query** from gqless, you
 ## Future
 
 - Add support for Pagination, with a **fetchMore**-alike (since gqless doesn't have planned support for it for the foreseeable future)
-- Merge the cache of the default client generated for the **query** with the cache of these caches.
+- Merge the cache of the default client generated for the **query** with the cache of these hooks.
 - Optimize these hooks for not having to create an entire new client every time just for cache invalidation.
