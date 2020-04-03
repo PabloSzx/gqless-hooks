@@ -18,7 +18,6 @@ import {
   useFetchCallback,
   CreateOptions,
   QueryOptions,
-  timeoutError,
   FetchPolicy,
   emptyCallback,
 } from './common';
@@ -72,53 +71,63 @@ export const createUseQuery = <
 
   const fetchQuery = useFetchCallback(dispatch, endpoint, fetchPolicy);
 
-  const initialQueryClient = useMemo(
-    () => new Client<Query>(schema.Query, fetchQuery),
-    [fetchQuery]
-  );
+  const initialQueryClient = useMemo(() => {
+    return new Client<Query>(schema.Query, fetchQuery);
+  }, [fetchQuery]);
 
-  const queryClient = useRef<Client<Query>>(initialQueryClient);
+  const queryClientRef = useRef<Client<Query>>(initialQueryClient);
 
   const queryCallback = useCallback<QueryCallback<TData, Query>>(
     async (
       query = queryFnRef.current,
       fetchPolicy = optionsRef.current.fetchPolicy
     ) => {
-      let client: Client<Query> = queryClient.current;
+      let client: Client<Query> = queryClientRef.current;
 
       let val: Maybe<TData> = null;
 
-      if (fetchPolicy !== 'network-only') {
-        val = query(client.query);
+      let promise: Promise<void> | undefined;
+
+      let noCache = false;
+
+      switch (fetchPolicy) {
+        case 'network-only':
+        case 'no-cache': {
+          noCache = true;
+          break;
+        }
+        default: {
+          val = query(client.query);
+        }
       }
 
-      if (
-        fetchPolicy === 'network-only' ||
-        client.scheduler.commit.accessors.size === 0
-      ) {
+      let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
+
+      const waitForGqlessFetch = () =>
+        new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve();
+          }, optionsRef.current.fetchTimeout);
+
+          client.scheduler.commit.onFetched(() => {
+            isFetchingRef.current = false;
+            clearTimeout(timeout);
+
+            resolve();
+          });
+        });
+
+      if (noCache || !isFetchingGqless) {
         switch (fetchPolicy) {
           case 'no-cache':
           case 'network-only':
           case 'cache-and-network': {
             client = new Client<Query>(schema.Query, fetchQuery);
-            queryClient.current = client;
+            queryClientRef.current = client;
+
             query(client.query);
 
-            await new Promise((resolve, reject) => {
-              const timeoutReject = setTimeout(() => {
-                isFetchingRef.current = false;
-                reject(timeoutError);
-              }, optionsRef.current.fetchTimeout);
-
-              client.scheduler.commit.onFetched(() => {
-                isFetchingRef.current = false;
-                clearTimeout(timeoutReject);
-
-                resolve();
-              });
-            });
-
-            val = query(client.query);
+            promise = waitForGqlessFetch();
 
             break;
           }
@@ -126,13 +135,20 @@ export const createUseQuery = <
             break;
           }
         }
+      } else if (isFetchingGqless) {
+        promise = waitForGqlessFetch();
+      }
+
+      if (promise) {
+        await promise;
+        val = query(client.query);
       }
 
       setData(val);
 
       return val;
     },
-    [queryClient, setData, fetchQuery, queryFnRef, optionsRef, isFetchingRef]
+    [queryClientRef, setData, fetchQuery, queryFnRef, optionsRef, isFetchingRef]
   );
 
   if (!isMountedRef.current && !isFetchingRef.current && !lazy) {

@@ -80,8 +80,6 @@ export const StateReducer = (
   }
 };
 
-export const timeoutError = Error('gqless-hooks');
-
 export const emptyCallback = () => {};
 
 export const useFetchCallback = (
@@ -92,7 +90,8 @@ export const useFetchCallback = (
     onPreEffect?: () => void;
     onSuccessEffect?: () => void;
     onErrorEffect?: (err: any) => void;
-  }
+  },
+  type: 'query' | 'mutation' = 'query'
 ) => {
   const effectsRef = useRef(effects);
   effectsRef.current = effects;
@@ -121,38 +120,37 @@ export const useFetchCallback = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: query,
+          query: type !== 'query' ? type + query : query,
           variables,
         }),
         mode: 'cors',
       });
 
-      if (!response.ok) {
-        try {
-          const json = await response.json();
+      let json: any;
 
-          if (json?.errors) {
-            effectsRef.current?.onErrorEffect?.(json.errors);
-
-            dispatch({
-              type: 'error',
-              payload: json.errors,
-            });
-          }
-        } catch (err) {
-          effectsRef.current?.onErrorEffect?.(err);
-          dispatch({
-            type: 'error',
-            payload: [],
-          });
-        }
-
-        throw new Error(
-          `Network error, received status code ${response.status}`
-        );
+      try {
+        json = await response.json();
+      } catch (err) {
+        effectsRef.current?.onErrorEffect?.(err);
+        throw err;
       }
 
-      const json = await response.json();
+      if (!response.ok) {
+        let errorPayload: GraphQLError[] | undefined;
+
+        errorPayload = json?.errors ?? (Array.isArray(json) ? json : undefined);
+
+        const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
+
+        effectsRef.current?.onErrorEffect?.(errorPayload ?? errorText);
+
+        dispatch({
+          type: 'error',
+          payload: errorPayload ?? [],
+        });
+
+        throw new Error(errorText);
+      }
 
       if (json?.errors) {
         effectsRef.current?.onErrorEffect?.(json.errors);
@@ -169,6 +167,6 @@ export const useFetchCallback = (
 
       return json;
     },
-    [dispatch, endpoint, fetchPolicy]
+    [dispatch, endpoint, fetchPolicy, type]
   );
 };

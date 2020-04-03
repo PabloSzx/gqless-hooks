@@ -21,8 +21,8 @@ import {
 } from './common';
 
 const defaultOptions = <TData>(options: MutationOptions<TData>) => {
-  const { fetchPolicy = 'cache-and-network', ...rest } = options;
-  return { fetchPolicy, ...rest };
+  const { fetchTimeout = 10000, ...rest } = options;
+  return { fetchTimeout, ...rest };
 };
 
 export type MutationFn<TData, Mutation> = (
@@ -51,22 +51,33 @@ export const createUseMutation = <
 
   const [data, setData] = useState<Maybe<TData>>();
 
-  const fetchMutation = useFetchCallback(dispatch, endpoint, fetchPolicy, {
-    onPreEffect: () => {
-      switch (fetchPolicy) {
-        case 'cache-only':
-        case 'cache-and-network':
-        case 'network-only':
-        case 'cache-first': {
-          break;
+  const fetchMutation = useFetchCallback(
+    dispatch,
+    endpoint,
+    fetchPolicy,
+    {
+      onPreEffect: () => {
+        switch (fetchPolicy) {
+          case 'cache-only':
+          case 'cache-and-network':
+          case 'network-only':
+          case 'cache-first': {
+            break;
+          }
+          case 'no-cache':
+          default: {
+            setData(undefined);
+          }
         }
-        case 'no-cache':
-        default: {
-          setData(undefined);
+      },
+      onErrorEffect: (err) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(err);
         }
-      }
+      },
     },
-  });
+    'mutation'
+  );
 
   const mutationCallback = useCallback<
     (mutationFnArg?: MutationFn<TData, Mutation>) => Promise<TData>
@@ -82,7 +93,12 @@ export const createUseMutation = <
       mutation(mutationClient.query);
 
       await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve();
+        }, optionsRef.current.fetchTimeout);
+
         mutationClient.scheduler.commit.onFetched(() => {
+          clearTimeout(timeout);
           resolve();
         });
       });
@@ -99,8 +115,14 @@ export const createUseMutation = <
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       switch (fetchPolicy) {
-        default: {
+        case 'cache-only':
+        case 'cache-first':
+        case 'cache-and-network': {
           console.warn(NoCacheMergeWarn);
+          break;
+        }
+        default: {
+          break;
         }
       }
     }
