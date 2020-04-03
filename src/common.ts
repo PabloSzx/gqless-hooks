@@ -106,10 +106,6 @@ export const useFetchCallback = (
             data: null,
           };
         }
-
-        default: {
-          break;
-        }
       }
 
       dispatch({ type: 'loading' });

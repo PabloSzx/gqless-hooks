@@ -90,15 +90,10 @@ export const createUseQuery = <
 
       let noCache = false;
 
-      switch (fetchPolicy) {
-        case 'network-only':
-        case 'no-cache': {
-          noCache = true;
-          break;
-        }
-        default: {
-          val = query(client.query);
-        }
+      if (fetchPolicy === 'network-only' || fetchPolicy === 'no-cache') {
+        noCache = true;
+      } else {
+        val = query(client.query);
       }
 
       let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
@@ -118,22 +113,17 @@ export const createUseQuery = <
         });
 
       if (noCache || !isFetchingGqless) {
-        switch (fetchPolicy) {
-          case 'no-cache':
-          case 'network-only':
-          case 'cache-and-network': {
-            client = new Client<Query>(schema.Query, fetchQuery);
-            queryClientRef.current = client;
+        if (
+          fetchPolicy === 'no-cache' ||
+          fetchPolicy === 'network-only' ||
+          fetchPolicy === 'cache-and-network'
+        ) {
+          client = new Client<Query>(schema.Query, fetchQuery);
+          queryClientRef.current = client;
 
-            query(client.query);
+          query(client.query);
 
-            promise = waitForGqlessFetch();
-
-            break;
-          }
-          default: {
-            break;
-          }
+          promise = waitForGqlessFetch();
         }
       } else if (isFetchingGqless) {
         promise = waitForGqlessFetch();
@@ -180,16 +170,8 @@ export const createUseQuery = <
     isMountedRef.current = true;
 
     if (process.env.NODE_ENV !== 'production') {
-      switch (fetchPolicy) {
-        case 'cache-only':
-        case 'cache-first': {
-          console.warn(NoCacheMergeWarn);
-          break;
-        }
-
-        default: {
-          break;
-        }
+      if (fetchPolicy === 'cache-only' || fetchPolicy === 'cache-first') {
+        console.warn(NoCacheMergeWarn);
       }
     }
   }, [fetchPolicy]);

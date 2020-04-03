@@ -58,14 +58,8 @@ export const createUseMutation = <
     {
       onPreEffect: () => {
         switch (fetchPolicy) {
-          case 'cache-only':
-          case 'cache-and-network':
-          case 'network-only':
-          case 'cache-first': {
-            break;
-          }
           case 'no-cache':
-          default: {
+          case undefined: {
             setData(undefined);
           }
         }
@@ -119,10 +113,6 @@ export const createUseMutation = <
         case 'cache-first':
         case 'cache-and-network': {
           console.warn(NoCacheMergeWarn);
-          break;
-        }
-        default: {
-          break;
         }
       }
     }
