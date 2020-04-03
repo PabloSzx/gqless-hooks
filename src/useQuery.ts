@@ -69,7 +69,18 @@ export const createUseQuery = <
     lazy ? LazyInitialState : EarlyInitialState
   );
 
-  const fetchQuery = useFetchCallback(dispatch, endpoint, fetchPolicy);
+  const fetchQuery = useFetchCallback({
+    dispatch,
+    endpoint,
+    fetchPolicy,
+    effects: {
+      onErrorEffect: (err) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(err);
+        }
+      },
+    },
+  });
 
   const initialQueryClient = useMemo(() => {
     return new Client<Query>(schema.Query, fetchQuery);

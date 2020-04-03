@@ -82,23 +82,31 @@ export const StateReducer = (
 
 export const emptyCallback = () => {};
 
-export const useFetchCallback = (
-  dispatch: Dispatch<IDispatch>,
-  endpoint: string,
-  fetchPolicy: FetchPolicy | undefined,
-  effects?: {
+export const useFetchCallback = (args: {
+  dispatch: Dispatch<IDispatch>;
+  endpoint: string;
+  fetchPolicy: FetchPolicy | undefined;
+  effects: {
     onPreEffect?: () => void;
     onSuccessEffect?: () => void;
     onErrorEffect?: (err: any) => void;
-  },
-  type: 'query' | 'mutation' = 'query'
-) => {
-  const effectsRef = useRef(effects);
-  effectsRef.current = effects;
+  };
+  type?: 'query' | 'mutation';
+}) => {
+  const argsRef = useRef(args);
+  argsRef.current = args;
 
   return useCallback<QueryFetcher>(
     async (query, variables) => {
-      effectsRef.current?.onPreEffect?.();
+      const {
+        dispatch,
+        endpoint,
+        fetchPolicy,
+        effects,
+        type = 'query',
+      } = argsRef.current;
+
+      effects.onPreEffect?.();
 
       switch (fetchPolicy) {
         case 'cache-only': {
@@ -127,7 +135,7 @@ export const useFetchCallback = (
       try {
         json = await response.json();
       } catch (err) {
-        effectsRef.current?.onErrorEffect?.(err);
+        effects.onErrorEffect?.(err);
         throw err;
       }
 
@@ -138,7 +146,7 @@ export const useFetchCallback = (
 
         const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
 
-        effectsRef.current?.onErrorEffect?.(errorPayload ?? errorText);
+        effects.onErrorEffect?.(errorPayload ?? errorText);
 
         dispatch({
           type: 'error',
@@ -149,13 +157,13 @@ export const useFetchCallback = (
       }
 
       if (json?.errors) {
-        effectsRef.current?.onErrorEffect?.(json.errors);
+        effects.onErrorEffect?.(json.errors);
         dispatch({
           type: 'error',
           payload: json.errors,
         });
       } else {
-        effectsRef.current?.onSuccessEffect?.();
+        effects.onSuccessEffect?.();
         dispatch({
           type: 'done',
         });
@@ -163,6 +171,6 @@ export const useFetchCallback = (
 
       return json;
     },
-    [dispatch, endpoint, fetchPolicy, type]
+    [argsRef]
   );
 };
