@@ -20,6 +20,7 @@ import {
   QueryOptions,
   timeoutError,
   FetchPolicy,
+  emptyCallback,
 } from './common';
 
 export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
@@ -34,9 +35,10 @@ const defaultOptions = <TData>(options: QueryOptions<TData>) => {
     lazy = false,
     fetchPolicy = 'cache-and-network',
     fetchTimeout = 10000,
+    pollInterval = 0,
     ...rest
   } = options;
-  return { lazy, fetchPolicy, fetchTimeout, ...rest };
+  return { lazy, fetchPolicy, fetchTimeout, pollInterval, ...rest };
 };
 
 export const createUseQuery = <
@@ -50,7 +52,11 @@ export const createUseQuery = <
   options: QueryOptions<TData> = {}
 ): [IState & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
   const optionsRef = useRef(options);
-  const { lazy, fetchPolicy } = (optionsRef.current = defaultOptions(options));
+  const {
+    lazy,
+    fetchPolicy,
+    pollInterval,
+  } = (optionsRef.current = defaultOptions(options));
 
   const isMountedRef = useRef(false);
 
@@ -131,6 +137,25 @@ export const createUseQuery = <
       console.error(error);
     });
   }
+
+  useEffect(() => {
+    if (pollInterval > 0) {
+      let isFetching = false;
+      const interval = setInterval(async () => {
+        if (!isFetching) {
+          isFetching = true;
+          await queryCallback(undefined, 'network-only').catch(console.error);
+          isFetching = false;
+        }
+      }, pollInterval);
+
+      return () => {
+        clearInterval(interval);
+      };
+    }
+
+    return emptyCallback;
+  }, [pollInterval, queryCallback]);
 
   useEffect(() => {
     isMountedRef.current = true;

@@ -82,6 +82,8 @@ export const StateReducer = (
 
 export const timeoutError = Error('gqless-hooks');
 
+export const emptyCallback = () => {};
+
 export const useFetchCallback = (
   dispatch: Dispatch<IDispatch>,
   endpoint: string,
