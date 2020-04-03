@@ -9,6 +9,20 @@ export type CreateOptions<Schema> = {
   schema: Schema;
 };
 
+interface CommonHookOptions<TData> {
+  fetchPolicy?: FetchPolicy;
+  onCompleted?: (data: Maybe<TData>) => void;
+  onError?: (errors: GraphQLError[]) => void;
+  context?: Record<string, any>;
+  fetchTimeout?: number;
+}
+
+export interface QueryOptions<TData> extends CommonHookOptions<TData> {
+  lazy?: boolean;
+  pollInterval?: number;
+}
+export interface MutationOptions<TData> extends CommonHookOptions<TData> {}
+
 export type IState = {
   state: 'waiting' | 'loading' | 'error' | 'done';
   errors?: GraphQLError[];
@@ -22,15 +36,14 @@ export type IDispatchAction<
   type: ActionType;
   payload?: ActionPayload;
 };
-
-export type Maybe<T> = T | null | undefined;
-
 export type FetchPolicy =
   | 'cache-first'
   | 'cache-and-network'
   | 'network-only'
   | 'cache-only'
   | 'no-cache';
+
+export type Maybe<T> = T | null | undefined;
 
 export const NoCacheMergeWarn =
   'gqless-hooks | Caching merge still is not being handled in this version';
@@ -66,6 +79,8 @@ export const StateReducer = (
       return reducerState;
   }
 };
+
+export const timeoutError = Error('gqless-hooks');
 
 export const useFetchCallback = (
   dispatch: Dispatch<IDispatch>,

@@ -12,15 +12,20 @@ import {
 import {
   StateReducer,
   IState,
-  FetchPolicy,
   LazyInitialState,
   Maybe,
   NoCacheMergeWarn,
   useFetchCallback,
   CreateOptions,
+  MutationOptions,
 } from './common';
 
-export type IMutationFn<TData, Mutation> = (
+const defaultOptions = <TData>(options: MutationOptions<TData>) => {
+  const { fetchPolicy = 'cache-and-network', ...rest } = options;
+  return { fetchPolicy, ...rest };
+};
+
+export type MutationFn<TData, Mutation> = (
   schema: Client<Mutation>['query']
 ) => TData;
 
@@ -31,16 +36,15 @@ export const createUseMutation = <
   endpoint,
   schema,
 }: CreateOptions<Schema>) => <TData = unknown>(
-  mutationFn: IMutationFn<TData, Mutation>,
-  {
-    fetchPolicy,
-  }: {
-    fetchPolicy?: FetchPolicy;
-  } = {}
+  mutationFn: MutationFn<TData, Mutation>,
+  options: MutationOptions<TData> = {}
 ): [
-  (mutationFn?: IMutationFn<TData, Mutation>) => Promise<TData>,
+  (mutationFn?: MutationFn<TData, Mutation>) => Promise<TData>,
   IState & { data: Maybe<TData> }
 ] => {
+  const optionsRef = useRef(options);
+  const { fetchPolicy } = (optionsRef.current = defaultOptions(options));
+
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
   const [state, dispatch] = useReducer(StateReducer, LazyInitialState);
@@ -65,7 +69,7 @@ export const createUseMutation = <
   });
 
   const mutationCallback = useCallback<
-    (mutationFnArg?: IMutationFn<TData, Mutation>) => Promise<TData>
+    (mutationFnArg?: MutationFn<TData, Mutation>) => Promise<TData>
   >(
     async (mutationFnArg) => {
       const mutation = mutationFnArg || mutationFnRef.current;

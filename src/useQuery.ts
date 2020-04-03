@@ -10,7 +10,6 @@ import {
 
 import {
   IState,
-  FetchPolicy,
   EarlyInitialState,
   LazyInitialState,
   Maybe,
@@ -18,9 +17,27 @@ import {
   StateReducer,
   useFetchCallback,
   CreateOptions,
+  QueryOptions,
+  timeoutError,
+  FetchPolicy,
 } from './common';
 
-export type IQueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
+export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
+
+type QueryCallback<TData, Query> = (
+  queryFnArg?: QueryFn<TData, Query>,
+  fetchPolicy?: FetchPolicy
+) => Promise<Maybe<TData>>;
+
+const defaultOptions = <TData>(options: QueryOptions<TData>) => {
+  const {
+    lazy = false,
+    fetchPolicy = 'cache-and-network',
+    fetchTimeout = 10000,
+    ...rest
+  } = options;
+  return { lazy, fetchPolicy, fetchTimeout, ...rest };
+};
 
 export const createUseQuery = <
   Query,
@@ -29,18 +46,14 @@ export const createUseQuery = <
   endpoint,
   schema,
 }: CreateOptions<Schema>) => <TData = unknown>(
-  queryFn: IQueryFn<TData, Query>,
-  {
-    lazy = false,
-    fetchPolicy = 'cache-and-network',
-  }: {
-    lazy?: boolean;
-    fetchPolicy?: FetchPolicy;
-  } = {}
-): [
-  IState & { data: Maybe<TData> },
-  (queryFn?: IQueryFn<TData, Query>) => Promise<TData>
-] => {
+  queryFn: QueryFn<TData, Query>,
+  options: QueryOptions<TData> = {}
+): [IState & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
+  const optionsRef = useRef(options);
+  const { lazy, fetchPolicy } = (optionsRef.current = defaultOptions(options));
+
+  const isMountedRef = useRef(false);
+
   const queryFnRef = useRef(queryFn);
   queryFnRef.current = queryFn;
 
@@ -59,36 +72,59 @@ export const createUseQuery = <
 
   const queryClient = useRef<Client<Query>>(initialQueryClient);
 
-  const queryCallback = useCallback<
-    (queryFnArg?: IQueryFn<TData, Query>) => Promise<TData>
-  >(
-    async (queryFnArg) => {
-      const query = queryFnArg || queryFnRef.current;
+  const queryCallback = useCallback<QueryCallback<TData, Query>>(
+    async (
+      query = queryFnRef.current,
+      fetchPolicy = optionsRef.current.fetchPolicy
+    ) => {
       let client: Client<Query> = queryClient.current;
 
-      query(client.query);
+      let val: Maybe<TData> = null;
 
-      if (client.scheduler.commit.accessors.size === 0) {
-        client = new Client<Query>(schema.Query, fetchQuery);
-        queryClient.current = client;
-        query(client.query);
+      if (fetchPolicy !== 'network-only') {
+        val = query(client.query);
       }
 
-      await new Promise((resolve) => {
-        client.scheduler.commit.onFetched(() => {
-          resolve();
-        });
-      });
-      const val = query(client.query);
+      if (
+        fetchPolicy === 'network-only' ||
+        client.scheduler.commit.accessors.size === 0
+      ) {
+        switch (fetchPolicy) {
+          case 'no-cache':
+          case 'network-only':
+          case 'cache-and-network': {
+            client = new Client<Query>(schema.Query, fetchQuery);
+            queryClient.current = client;
+            query(client.query);
+
+            await new Promise((resolve, reject) => {
+              const timeoutReject = setTimeout(() => {
+                reject(timeoutError);
+              }, optionsRef.current.fetchTimeout);
+
+              client.scheduler.commit.onFetched(() => {
+                clearTimeout(timeoutReject);
+
+                resolve();
+              });
+            });
+
+            val = query(client.query);
+
+            break;
+          }
+          default: {
+            break;
+          }
+        }
+      }
 
       setData(val);
 
       return val;
     },
-    [queryClient, setData, fetchQuery, queryFnRef]
+    [queryClient, setData, fetchQuery, queryFnRef, optionsRef]
   );
-
-  const isMountedRef = useRef(false);
 
   if (!isMountedRef.current && !lazy) {
     queryCallback().catch((error) => {
@@ -112,7 +148,7 @@ export const createUseQuery = <
         }
       }
     }
-  }, [isMountedRef, fetchPolicy]);
+  }, [fetchPolicy]);
 
   return useMemo(() => [{ ...state, data }, queryCallback], [
     queryCallback,
