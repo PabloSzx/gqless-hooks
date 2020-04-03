@@ -59,6 +59,7 @@ export const createUseQuery = <
   } = (optionsRef.current = defaultOptions(options));
 
   const isMountedRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
   const queryFnRef = useRef(queryFn);
   queryFnRef.current = queryFn;
@@ -105,10 +106,12 @@ export const createUseQuery = <
 
             await new Promise((resolve, reject) => {
               const timeoutReject = setTimeout(() => {
+                isFetchingRef.current = false;
                 reject(timeoutError);
               }, optionsRef.current.fetchTimeout);
 
               client.scheduler.commit.onFetched(() => {
+                isFetchingRef.current = false;
                 clearTimeout(timeoutReject);
 
                 resolve();
@@ -129,10 +132,11 @@ export const createUseQuery = <
 
       return val;
     },
-    [queryClient, setData, fetchQuery, queryFnRef, optionsRef]
+    [queryClient, setData, fetchQuery, queryFnRef, optionsRef, isFetchingRef]
   );
 
-  if (!isMountedRef.current && !lazy) {
+  if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
+    isFetchingRef.current = true;
     queryCallback().catch((error) => {
       console.error(error);
     });
@@ -140,12 +144,11 @@ export const createUseQuery = <
 
   useEffect(() => {
     if (pollInterval > 0) {
-      let isFetching = false;
       const interval = setInterval(async () => {
-        if (!isFetching) {
-          isFetching = true;
+        if (!isFetchingRef.current) {
+          isFetchingRef.current = true;
           await queryCallback(undefined, 'network-only').catch(console.error);
-          isFetching = false;
+          isFetchingRef.current = false;
         }
       }, pollInterval);
 
@@ -155,7 +158,7 @@ export const createUseQuery = <
     }
 
     return emptyCallback;
-  }, [pollInterval, queryCallback]);
+  }, [pollInterval, queryCallback, isFetchingRef]);
 
   useEffect(() => {
     isMountedRef.current = true;
