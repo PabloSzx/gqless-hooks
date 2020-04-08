@@ -47,7 +47,7 @@ export const createUseQuery = <
 >({
   endpoint,
   schema,
-  headers: createHeaders,
+  headers: creationHeaders,
 }: CreateOptions<Schema>) => <TData = unknown>(
   queryFn: QueryFn<TData, Query>,
   options: QueryOptions<TData> = {}
@@ -80,7 +80,7 @@ export const createUseQuery = <
       onErrorEffect: logDevErrors,
     },
     type: 'query',
-    createHeaders,
+    creationHeaders,
     headers,
   });
 

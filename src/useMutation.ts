@@ -36,7 +36,7 @@ export const createUseMutation = <
 >({
   endpoint,
   schema,
-  headers: createHeaders,
+  headers: creationHeaders,
 }: CreateOptions<Schema>) => <TData = unknown>(
   mutationFn: MutationFn<TData, Mutation>,
   options: MutationOptions<TData> = {}
@@ -72,7 +72,7 @@ export const createUseMutation = <
       onErrorEffect: logDevErrors,
     },
     type: 'mutation',
-    createHeaders,
+    creationHeaders,
     headers,
   });
 

@@ -103,7 +103,7 @@ export const useFetchCallback = (args: {
     onErrorEffect?: (err: any) => void;
   };
   type: 'query' | 'mutation';
-  createHeaders: Headers | undefined;
+  creationHeaders: Headers | undefined;
   headers: Headers | undefined;
 }) => {
   const argsRef = useRef(args);
@@ -117,7 +117,7 @@ export const useFetchCallback = (args: {
         fetchPolicy,
         effects,
         type = 'query',
-        createHeaders,
+        creationHeaders,
         headers,
       } = argsRef.current;
 
@@ -137,7 +137,7 @@ export const useFetchCallback = (args: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...createHeaders,
+          ...creationHeaders,
           ...headers,
         },
         body: JSON.stringify({
