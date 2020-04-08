@@ -13,6 +13,16 @@ npm install gqless-hooks
 
 This library creates a couple of hooks to interact with [**gqless**](https://gqless.dev/), all while being type-safe.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [Usage](#usage)
+- [About it](#about-it)
+- [Future](#future)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Usage
 
 This library should ideally be imported and used at **src/graphql/client.ts** (_this is default location, could be anywhere you previously set it up_)

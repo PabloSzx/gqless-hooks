@@ -48,16 +48,16 @@ export const createUseMutation = <
 
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
+
   const [state, dispatch] = useReducer(StateReducer, LazyInitialState);
 
   const [data, setData] = useState<Maybe<TData>>();
 
-  const fetchMutation = useFetchCallback(
+  const fetchMutation = useFetchCallback({
     dispatch,
     endpoint,
     fetchPolicy,
-    headers,
-    {
+    effects: {
       onPreEffect: () => {
         switch (fetchPolicy) {
           case 'no-cache':
@@ -72,8 +72,9 @@ export const createUseMutation = <
         }
       },
     },
-    'mutation'
-  );
+    type: 'mutation',
+    headers,
+  });
 
   const mutationCallback = useCallback<
     (mutationFnArg?: MutationFn<TData, Mutation>) => Promise<TData>
