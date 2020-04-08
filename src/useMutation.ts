@@ -35,6 +35,7 @@ export const createUseMutation = <
 >({
   endpoint,
   schema,
+  headers,
 }: CreateOptions<Schema>) => <TData = unknown>(
   mutationFn: MutationFn<TData, Mutation>,
   options: MutationOptions<TData> = {}
@@ -55,6 +56,7 @@ export const createUseMutation = <
     dispatch,
     endpoint,
     fetchPolicy,
+    headers,
     {
       onPreEffect: () => {
         switch (fetchPolicy) {
