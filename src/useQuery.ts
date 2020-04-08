@@ -46,6 +46,7 @@ export const createUseQuery = <
 >({
   endpoint,
   schema,
+  headers,
 }: CreateOptions<Schema>) => <TData = unknown>(
   queryFn: QueryFn<TData, Query>,
   options: QueryOptions<TData> = {}
@@ -69,7 +70,12 @@ export const createUseQuery = <
     lazy ? LazyInitialState : EarlyInitialState
   );
 
-  const fetchQuery = useFetchCallback(dispatch, endpoint, fetchPolicy);
+  const fetchQuery = useFetchCallback(
+    dispatch,
+    endpoint,
+    fetchPolicy,
+    headers
+  );
 
   const initialQueryClient = useMemo(() => {
     return new Client<Query>(schema.Query, fetchQuery);

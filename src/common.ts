@@ -7,6 +7,7 @@ import { Dispatch, useCallback, useRef } from 'react';
 export type CreateOptions<Schema> = {
   endpoint: string;
   schema: Schema;
+  headers?: Record<string, string>;
 };
 
 interface CommonHookOptions<TData> {
@@ -86,6 +87,7 @@ export const useFetchCallback = (
   dispatch: Dispatch<IDispatch>,
   endpoint: string,
   fetchPolicy: FetchPolicy | undefined,
+  headers?: Record<string, string>,
   effects?: {
     onPreEffect?: () => void;
     onSuccessEffect?: () => void;
@@ -114,6 +116,7 @@ export const useFetchCallback = (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...headers,
         },
         body: JSON.stringify({
           query: type !== 'query' ? type + query : query,
@@ -163,6 +166,6 @@ export const useFetchCallback = (
 
       return json;
     },
-    [dispatch, endpoint, fetchPolicy, type]
+    [dispatch, endpoint, fetchPolicy, headers, type]
   );
 };
