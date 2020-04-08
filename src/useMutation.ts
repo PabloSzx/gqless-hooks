@@ -18,6 +18,7 @@ import {
   useFetchCallback,
   CreateOptions,
   MutationOptions,
+  logDevErrors,
 } from './common';
 
 const defaultOptions = <TData>(options: MutationOptions<TData>) => {
@@ -35,7 +36,7 @@ export const createUseMutation = <
 >({
   endpoint,
   schema,
-  headers,
+  headers: createHeaders,
 }: CreateOptions<Schema>) => <TData = unknown>(
   mutationFn: MutationFn<TData, Mutation>,
   options: MutationOptions<TData> = {}
@@ -44,7 +45,9 @@ export const createUseMutation = <
   IState & { data: Maybe<TData> }
 ] => {
   const optionsRef = useRef(options);
-  const { fetchPolicy } = (optionsRef.current = defaultOptions(options));
+  const { fetchPolicy, headers } = (optionsRef.current = defaultOptions(
+    options
+  ));
 
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
@@ -66,13 +69,10 @@ export const createUseMutation = <
           }
         }
       },
-      onErrorEffect: (err) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error(err);
-        }
-      },
+      onErrorEffect: logDevErrors,
     },
     type: 'mutation',
+    createHeaders,
     headers,
   });
 

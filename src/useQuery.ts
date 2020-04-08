@@ -20,6 +20,7 @@ import {
   QueryOptions,
   FetchPolicy,
   emptyCallback,
+  logDevErrors,
 } from './common';
 
 export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
@@ -46,7 +47,7 @@ export const createUseQuery = <
 >({
   endpoint,
   schema,
-  headers,
+  headers: createHeaders,
 }: CreateOptions<Schema>) => <TData = unknown>(
   queryFn: QueryFn<TData, Query>,
   options: QueryOptions<TData> = {}
@@ -56,6 +57,7 @@ export const createUseQuery = <
     lazy,
     fetchPolicy,
     pollInterval,
+    headers,
   } = (optionsRef.current = defaultOptions(options));
 
   const isMountedRef = useRef(false);
@@ -75,12 +77,10 @@ export const createUseQuery = <
     endpoint,
     fetchPolicy,
     effects: {
-      onErrorEffect: (err) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error(err);
-        }
-      },
+      onErrorEffect: logDevErrors,
     },
+    type: 'query',
+    createHeaders,
     headers,
   });
 

@@ -16,6 +16,7 @@ interface CommonHookOptions<TData> {
   onError?: (errors: GraphQLError[]) => void;
   context?: Record<string, any>;
   fetchTimeout?: number;
+  headers?: Headers;
 }
 
 export interface QueryOptions<TData> extends CommonHookOptions<TData> {
@@ -85,6 +86,13 @@ export const StateReducer = (
 
 export const emptyCallback = () => {};
 
+export const logDevErrors =
+  process.env.NODE_ENV !== 'production'
+    ? (err: any) => {
+        console.error(err);
+      }
+    : undefined;
+
 export const useFetchCallback = (args: {
   dispatch: Dispatch<IDispatch>;
   endpoint: string;
@@ -94,8 +102,9 @@ export const useFetchCallback = (args: {
     onSuccessEffect?: () => void;
     onErrorEffect?: (err: any) => void;
   };
-  type?: 'query' | 'mutation';
-  headers?: Headers;
+  type: 'query' | 'mutation';
+  createHeaders: Headers | undefined;
+  headers: Headers | undefined;
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
@@ -108,6 +117,7 @@ export const useFetchCallback = (args: {
         fetchPolicy,
         effects,
         type = 'query',
+        createHeaders,
         headers,
       } = argsRef.current;
 
@@ -127,6 +137,7 @@ export const useFetchCallback = (args: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...createHeaders,
           ...headers,
         },
         body: JSON.stringify({
