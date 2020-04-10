@@ -20,6 +20,7 @@ export interface NexusGenEnums {
 }
 
 export interface NexusGenRootTypes {
+  Mutation: {};
   Query: {};
   String: string;
   Int: number;
@@ -32,15 +33,23 @@ export interface NexusGenAllTypes extends NexusGenRootTypes {
 }
 
 export interface NexusGenFieldTypes {
+  Mutation: { // field return type
+    helloMutation: string; // String!
+  }
   Query: { // field return type
     hello: string; // String!
   }
 }
 
 export interface NexusGenArgTypes {
+  Mutation: {
+    helloMutation: { // args
+      arg1: string; // String!
+    }
+  }
   Query: {
     hello: { // args
-      name?: string | null; // String
+      name: string; // String!
     }
   }
 }
@@ -50,7 +59,7 @@ export interface NexusGenAbstractResolveReturnTypes {
 
 export interface NexusGenInheritedFields {}
 
-export type NexusGenObjectNames = "Query";
+export type NexusGenObjectNames = "Mutation" | "Query";
 
 export type NexusGenInputNames = never;
 

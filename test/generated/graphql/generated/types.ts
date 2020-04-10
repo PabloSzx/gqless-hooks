@@ -18,7 +18,7 @@ type Extension<TName extends string> = TName extends keyof typeof extensions
 type t_Query = FieldsType<
   {
     __typename: t_String<'Query'>;
-    hello: FieldsTypeArg<{ name?: string | undefined | null }, t_String>;
+    hello: FieldsTypeArg<{ name: string }, t_String>;
   },
   Extension<'Query'>
 >;
@@ -28,6 +28,18 @@ type t_Query = FieldsType<
  * @type SCALAR
  */
 type t_String<T extends string = string> = ScalarType<T, Extension<'String'>>;
+
+/**
+ * @name Mutation
+ * @type OBJECT
+ */
+type t_Mutation = FieldsType<
+  {
+    __typename: t_String<'Mutation'>;
+    helloMutation: FieldsTypeArg<{ arg1: string }, t_String>;
+  },
+  Extension<'Mutation'>
+>;
 
 /**
  * @name __Schema
@@ -218,6 +230,12 @@ export type Query = TypeData<t_Query>;
  * @type SCALAR
  */
 export type String = TypeData<t_String>;
+
+/**
+ * @name Mutation
+ * @type OBJECT
+ */
+export type Mutation = TypeData<t_Mutation>;
 
 /**
  * @name __Schema

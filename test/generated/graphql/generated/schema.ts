@@ -18,11 +18,14 @@ export const schema = {
         get hello() {
           return new FieldNode(
             schema.String,
-            new Arguments({
-              get name() {
-                return new ArgumentsField(schema.String, true);
+            new Arguments(
+              {
+                get name() {
+                  return new ArgumentsField(schema.String, false);
+                },
               },
-            }),
+              true
+            ),
             false
           );
         },
@@ -35,6 +38,27 @@ export const schema = {
       name: 'String',
       extension: ((extensions as any) || {}).String,
     });
+  },
+  get Mutation() {
+    return new ObjectNode(
+      {
+        get helloMutation() {
+          return new FieldNode(
+            schema.String,
+            new Arguments(
+              {
+                get arg1() {
+                  return new ArgumentsField(schema.String, false);
+                },
+              },
+              true
+            ),
+            false
+          );
+        },
+      },
+      { name: 'Mutation', extension: ((extensions as any) || {}).Mutation }
+    );
   },
   get __Schema() {
     return new ObjectNode(

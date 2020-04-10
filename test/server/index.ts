@@ -1,7 +1,6 @@
 import express from 'express';
 import { resolve } from 'path';
-
-import { queryType, stringArg, makeSchema } from '@nexus/schema';
+import { queryType, stringArg, makeSchema, mutationType } from '@nexus/schema';
 import bodyParser from 'body-parser';
 import { createGraphqlMiddleware } from 'express-gql';
 
@@ -12,14 +11,23 @@ app.use(bodyParser.json());
 const Query = queryType({
   definition(t) {
     t.string('hello', {
-      args: { name: stringArg({ nullable: true }) },
+      args: { name: stringArg({ nullable: false }) },
       resolve: (parent, { name }) => `Hello ${name || 'World'}!`,
     });
   },
 });
 
+const Mutation = mutationType({
+  definition(t) {
+    t.string('helloMutation', {
+      args: { arg1: stringArg({ nullable: false }) },
+      resolve: (parent, { arg1 }) => `mutation ${arg1}`,
+    });
+  },
+});
+
 const schema = makeSchema({
-  types: [Query] as any,
+  types: [Query, Mutation] as any,
   outputs: {
     schema: resolve(__dirname, '../generated/schema.graphql'),
     typegen: resolve(__dirname, '../generated/typings.ts'),
@@ -74,6 +82,10 @@ export const close = () => {
   serverClose();
 };
 
-process.on('SIGTERM', () => {
-  close();
-});
+const closeEvent = () => close();
+
+process.on('SIGTERM', closeEvent);
+
+process.on('SIGHUP', closeEvent);
+
+process.on('SIGINT', closeEvent);
