@@ -1,17 +1,8 @@
 import { Client, ObjectNode } from 'gqless';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import {
   IState,
-  EarlyInitialState,
-  LazyInitialState,
   Maybe,
   StateReducer,
   useFetchCallback,
@@ -21,6 +12,8 @@ import {
   emptyCallback,
   logDevErrors,
   SharedCache,
+  StateReducerInitialState,
+  IStateReducer,
 } from './common';
 
 export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
@@ -52,7 +45,7 @@ export const createUseQuery = <
   return <TData = unknown>(
     queryFn: QueryFn<TData, Query>,
     options: QueryOptions<TData> = {}
-  ): [IState & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
+  ): [IState<TData> & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
     const optionsRef = useRef(options);
     const {
       lazy,
@@ -67,13 +60,12 @@ export const createUseQuery = <
     const queryFnRef = useRef(queryFn);
     queryFnRef.current = queryFn;
 
-    const [data, setData] = useState<Maybe<TData>>();
-    const [state, dispatch] = useReducer(
+    const [state, dispatch] = useReducer<IStateReducer<TData>>(
       StateReducer,
-      lazy ? LazyInitialState : EarlyInitialState
+      StateReducerInitialState<TData>(lazy)
     );
 
-    const fetchQuery = useFetchCallback({
+    const fetchQuery = useFetchCallback<TData>({
       dispatch,
       endpoint,
       fetchPolicy,
@@ -134,7 +126,10 @@ export const createUseQuery = <
 
         if (noCache || !isFetchingGqless) {
           if (fetchPolicy !== 'no-cache') {
-            setData(val);
+            dispatch({
+              type: 'setData',
+              payload: val,
+            });
           }
 
           if (
@@ -165,9 +160,9 @@ export const createUseQuery = <
           );
         }
 
-        setData(val);
         dispatch({
           type: 'done',
+          payload: val,
         });
 
         return val;
@@ -175,7 +170,6 @@ export const createUseQuery = <
       [
         queryClientRef,
         dispatch,
-        setData,
         fetchQuery,
         queryFnRef,
         optionsRef,
@@ -212,10 +206,6 @@ export const createUseQuery = <
       isMountedRef.current = true;
     }, []);
 
-    return useMemo(() => [{ ...state, data }, queryCallback], [
-      state,
-      data,
-      queryCallback,
-    ]);
+    return useMemo(() => [state, queryCallback], [state, queryCallback]);
   };
 };

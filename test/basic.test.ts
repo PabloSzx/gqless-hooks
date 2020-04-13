@@ -55,7 +55,7 @@ describe('serverTest', () => {
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(nRender.renders.n).toBe(3);
+        expect(nRender.renders.n).toBe(2);
 
         expect(result.current[0].state).toBe('done');
       });

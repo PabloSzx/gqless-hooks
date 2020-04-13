@@ -2,7 +2,7 @@ import 'isomorphic-unfetch';
 
 import { QueryFetcher, Value, DataTrait } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, useCallback, useRef, useState } from 'react';
+import { Dispatch, useCallback, useRef, useState, Reducer } from 'react';
 
 export type CreateOptions<Schema> = {
   endpoint: string;
@@ -27,10 +27,11 @@ export interface MutationOptions<TData> extends CommonHookOptions<TData> {}
 
 type FetchState = 'waiting' | 'loading' | 'error' | 'done';
 
-export type IState = {
+export type IState<TData> = {
   state: FetchState;
   errors?: GraphQLError[];
   called: boolean;
+  data: Maybe<TData>;
 };
 
 export type IDispatchAction<
@@ -51,43 +52,65 @@ export type Maybe<T> = T | null | undefined;
 
 type Headers = Record<string, string | number | boolean>;
 
-export type IDispatch =
+export type IDispatch<TData extends any> =
   | IDispatchAction<'loading'>
-  | IDispatchAction<'done'>
-  | IDispatchAction<'error', GraphQLError[]>;
+  | IDispatchAction<'done', Maybe<TData>>
+  | IDispatchAction<'error', GraphQLError[]>
+  | IDispatchAction<'setData', Maybe<TData>>;
 
-const LoadingReducerState: IState = {
-  state: 'loading',
-  called: true,
-};
-
-const DoneReducerState: IState = {
-  state: 'done',
-  called: true,
-};
-
-export const LazyInitialState: IState = {
+const LazyInitialState: IState<any> = {
   state: 'waiting',
   called: false,
+  data: undefined,
 };
-export const EarlyInitialState: IState = LoadingReducerState;
+const EarlyInitialState: IState<any> = {
+  state: 'loading',
+  called: true,
+  data: undefined,
+};
+export const StateReducerInitialState = <TData>(
+  lazy: boolean
+): IState<TData> => {
+  if (lazy) return LazyInitialState;
 
-export const StateReducer = (
-  reducerState: IState,
-  action: IDispatch
-): IState => {
+  return EarlyInitialState;
+};
+
+export type IStateReducer<TData> = Reducer<IState<TData>, IDispatch<TData>>;
+
+export const StateReducer = <TData>(
+  reducerState: IState<TData>,
+  action: IDispatch<TData>
+): IState<TData> => {
   switch (action.type) {
     case 'done': {
-      return DoneReducerState;
+      return {
+        state: 'done',
+        called: true,
+        data: action.payload,
+      };
     }
     case 'loading': {
-      return LoadingReducerState;
+      if (reducerState.state === 'loading') return reducerState;
+
+      return {
+        state: 'loading',
+        called: true,
+        data: reducerState.data,
+      };
     }
     case 'error': {
       return {
         called: true,
         errors: action.payload,
         state: 'error',
+        data: reducerState.data,
+      };
+    }
+    case 'setData': {
+      return {
+        ...reducerState,
+        data: action.payload,
       };
     }
     default:
@@ -104,8 +127,8 @@ export const logDevErrors =
       }
     : undefined;
 
-export const useFetchCallback = (args: {
-  dispatch: Dispatch<IDispatch>;
+export const useFetchCallback = <TData>(args: {
+  dispatch: Dispatch<IDispatch<TData>>;
   endpoint: string;
   fetchPolicy: FetchPolicy | undefined;
   effects: {

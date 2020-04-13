@@ -1,17 +1,18 @@
 import { Client, ObjectNode } from 'gqless';
 
-import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useMemo, useReducer, useRef } from 'react';
 
 import {
   StateReducer,
   IState,
-  LazyInitialState,
   Maybe,
   useFetchCallback,
   CreateOptions,
   MutationOptions,
   logDevErrors,
   SharedCache,
+  StateReducerInitialState,
+  IStateReducer,
 } from './common';
 
 const defaultOptions = <TData>(options: MutationOptions<TData>) => {
@@ -35,7 +36,7 @@ export const createUseMutation = <
   options: MutationOptions<TData> = {}
 ): [
   (mutationFn?: MutationFn<TData, Mutation>) => Promise<TData>,
-  IState & { data: Maybe<TData> }
+  IState<TData> & { data: Maybe<TData> }
 ] => {
   const optionsRef = useRef(options);
   const { fetchPolicy, headers } = (optionsRef.current = defaultOptions(
@@ -45,9 +46,10 @@ export const createUseMutation = <
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
 
-  const [state, dispatch] = useReducer(StateReducer, LazyInitialState);
-
-  const [data, setData] = useState<Maybe<TData>>();
+  const [state, dispatch] = useReducer<IStateReducer<TData>>(
+    StateReducer,
+    StateReducerInitialState<TData>(true)
+  );
 
   const fetchMutation = useFetchCallback({
     dispatch,
@@ -58,7 +60,10 @@ export const createUseMutation = <
         switch (fetchPolicy) {
           case 'no-cache':
           case undefined: {
-            setData(undefined);
+            dispatch({
+              type: 'setData',
+              payload: undefined,
+            });
           }
         }
       },
@@ -95,21 +100,17 @@ export const createUseMutation = <
 
       const val = mutation(mutationClient.query);
 
-      setData(val);
       dispatch({
         type: 'done',
+        payload: val,
       });
 
       SharedCache.mergeCache(mutationClient.cache.rootValue);
 
       return val;
     },
-    [setData, fetchMutation, mutationFnRef]
+    [dispatch, fetchMutation, mutationFnRef]
   );
 
-  return useMemo(() => [mutationCallback, { ...state, data }], [
-    state,
-    data,
-    mutationCallback,
-  ]);
+  return useMemo(() => [mutationCallback, state], [state, mutationCallback]);
 };
