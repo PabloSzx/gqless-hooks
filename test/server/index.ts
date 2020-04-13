@@ -12,7 +12,7 @@ const Query = queryType({
   definition(t) {
     t.string('hello', {
       args: { name: stringArg({ nullable: false }) },
-      resolve: (parent, { name }) => `Hello ${name || 'World'}!`,
+      resolve: (parent, { name }) => `query ${name}!`,
     });
   },
 });

@@ -15,6 +15,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -91,4 +92,3 @@ If you are only using these hooks and not the default **query** from gqless, you
 
 - Add support for Pagination, with a **fetchMore**-alike (since gqless doesn't have planned support for it for the foreseeable future)
 - Merge the cache of the default client generated for the **query** with the cache of these hooks.
-- Optimize these hooks for not having to create an entire new client every time just for cache invalidation.

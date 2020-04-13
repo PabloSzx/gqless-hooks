@@ -19,6 +19,7 @@ import {
   CreateOptions,
   MutationOptions,
   logDevErrors,
+  SharedCache,
 } from './common';
 
 const defaultOptions = <TData>(options: MutationOptions<TData>) => {
@@ -104,22 +105,12 @@ export const createUseMutation = <
 
       setData(val);
 
+      SharedCache.mergeCache(mutationClient.cache.rootValue);
+
       return val;
     },
     [setData, fetchMutation, mutationFnRef]
   );
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      switch (fetchPolicy) {
-        case 'cache-only':
-        case 'cache-first':
-        case 'cache-and-network': {
-          console.warn(NoCacheMergeWarn);
-        }
-      }
-    }
-  }, [fetchPolicy]);
 
   return useMemo(() => [mutationCallback, { ...state, data }], [
     state,

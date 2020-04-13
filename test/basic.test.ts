@@ -43,7 +43,64 @@ describe('serverTest', () => {
       });
     });
 
-    expect(result.current[0].data).toBe('Hello zxc!');
+    expect(result.current[0].data).toBe('query zxc!');
+
+    const otherQuery = renderHook(() => {
+      const hook = useQuery(({ hello }) => {
+        const result = hello({
+          name: 'zxc',
+        });
+
+        return result;
+      });
+
+      return hook;
+    });
+
+    expect(otherQuery.result.current[0].state).toBe('done');
+    expect(otherQuery.result.current[0].data).toBe('query zxc!');
+
+    const otherQueryNetwork = renderHook(() => {
+      const hook = useQuery(
+        ({ hello }) => {
+          const result = hello({
+            name: 'zxc',
+          });
+
+          return result;
+        },
+        {
+          fetchPolicy: 'cache-and-network',
+        }
+      );
+
+      return hook;
+    });
+
+    expect(otherQueryNetwork.result.current[0].state).toBe('loading');
+    expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(otherQueryNetwork.result.current[0].state).toBe('done');
+      });
+    });
+    expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
+
+    const otherQueryAfterNewClient = renderHook(() => {
+      const hook = useQuery(({ hello }) => {
+        const result = hello({
+          name: 'zxc',
+        });
+
+        return result;
+      });
+
+      return hook;
+    });
+
+    expect(otherQueryAfterNewClient.result.current[0].state).toBe('done');
+    expect(otherQueryAfterNewClient.result.current[0].data).toBe('query zxc!');
   });
 
   test('mutation works', async () => {
@@ -73,5 +130,20 @@ describe('serverTest', () => {
     });
 
     expect(result.current[1].data).toBe('mutation zxc');
+
+    const otherQuery = renderHook(() => {
+      const hook = useQuery(({ hello }) => {
+        const result = hello({
+          name: 'zxc',
+        });
+
+        return result;
+      });
+
+      return hook;
+    });
+
+    expect(otherQuery.result.current[0].state).toBe('done');
+    expect(otherQuery.result.current[0].data).toBe('query zxc!');
   });
 });

@@ -13,7 +13,6 @@ import {
   EarlyInitialState,
   LazyInitialState,
   Maybe,
-  NoCacheMergeWarn,
   StateReducer,
   useFetchCallback,
   CreateOptions,
@@ -21,6 +20,7 @@ import {
   FetchPolicy,
   emptyCallback,
   logDevErrors,
+  SharedCache,
 } from './common';
 
 export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
@@ -33,7 +33,7 @@ type QueryCallback<TData, Query> = (
 const defaultOptions = <TData>(options: QueryOptions<TData>) => {
   const {
     lazy = false,
-    fetchPolicy = 'cache-and-network',
+    fetchPolicy = 'cache-first',
     fetchTimeout = 10000,
     pollInterval = 0,
     ...rest
@@ -48,150 +48,172 @@ export const createUseQuery = <
   endpoint,
   schema,
   headers: creationHeaders,
-}: CreateOptions<Schema>) => <TData = unknown>(
-  queryFn: QueryFn<TData, Query>,
-  options: QueryOptions<TData> = {}
-): [IState & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
-  const optionsRef = useRef(options);
-  const {
-    lazy,
-    fetchPolicy,
-    pollInterval,
-    headers,
-  } = (optionsRef.current = defaultOptions(options));
+}: CreateOptions<Schema>) => {
+  return <TData = unknown>(
+    queryFn: QueryFn<TData, Query>,
+    options: QueryOptions<TData> = {}
+  ): [IState & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
+    const optionsRef = useRef(options);
+    const {
+      lazy,
+      fetchPolicy,
+      pollInterval,
+      headers,
+    } = (optionsRef.current = defaultOptions(options));
 
-  const isMountedRef = useRef(false);
-  const isFetchingRef = useRef(false);
+    const isMountedRef = useRef(false);
+    const isFetchingRef = useRef(false);
 
-  const queryFnRef = useRef(queryFn);
-  queryFnRef.current = queryFn;
+    const queryFnRef = useRef(queryFn);
+    queryFnRef.current = queryFn;
 
-  const [data, setData] = useState<Maybe<TData>>();
-  const [state, dispatch] = useReducer(
-    StateReducer,
-    lazy ? LazyInitialState : EarlyInitialState
-  );
+    const [data, setData] = useState<Maybe<TData>>();
+    const [state, dispatch] = useReducer(
+      StateReducer,
+      lazy ? LazyInitialState : EarlyInitialState
+    );
 
-  const fetchQuery = useFetchCallback({
-    dispatch,
-    endpoint,
-    fetchPolicy,
-    effects: {
-      onErrorEffect: logDevErrors,
-    },
-    type: 'query',
-    creationHeaders,
-    headers,
-  });
+    const fetchQuery = useFetchCallback({
+      dispatch,
+      endpoint,
+      fetchPolicy,
+      effects: {
+        onErrorEffect: logDevErrors,
+      },
+      type: 'query',
+      creationHeaders,
+      headers,
+    });
 
-  const initialQueryClient = useMemo(() => {
-    return new Client<Query>(schema.Query, fetchQuery);
-  }, [fetchQuery]);
+    const initialQueryClient = useMemo(() => {
+      const client = new Client<Query>(schema.Query, fetchQuery);
 
-  const queryClientRef = useRef<Client<Query>>(initialQueryClient);
+      client.cache.rootValue = SharedCache.initialCache(client.cache.rootValue);
 
-  const queryCallback = useCallback<QueryCallback<TData, Query>>(
-    async (
-      query = queryFnRef.current,
-      fetchPolicy = optionsRef.current.fetchPolicy
-    ) => {
-      let client: Client<Query> = queryClientRef.current;
+      return client;
+    }, [fetchQuery]);
 
-      let val: Maybe<TData> = null;
+    const queryClientRef = useRef<Client<Query>>(initialQueryClient);
 
-      let promise: Promise<void> | undefined;
+    const queryCallback = useCallback<QueryCallback<TData, Query>>(
+      async (
+        query = queryFnRef.current,
+        fetchPolicy = optionsRef.current.fetchPolicy
+      ) => {
+        let client: Client<Query> = queryClientRef.current;
 
-      let noCache = false;
+        let val: Maybe<TData> = null;
 
-      if (fetchPolicy === 'network-only' || fetchPolicy === 'no-cache') {
-        noCache = true;
-      } else {
-        val = query(client.query);
-      }
+        let newClientCreated = false;
 
-      let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
+        let promise: Promise<void> | undefined;
 
-      const waitForGqlessFetch = () =>
-        new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            resolve();
-          }, optionsRef.current.fetchTimeout);
+        let noCache = false;
 
-          client.scheduler.commit.onFetched(() => {
-            isFetchingRef.current = false;
-            clearTimeout(timeout);
+        if (fetchPolicy === 'network-only' || fetchPolicy === 'no-cache') {
+          noCache = true;
+        } else {
+          val = query(client.query);
+        }
 
-            resolve();
+        let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
+
+        const waitForGqlessFetch = () =>
+          new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+              resolve();
+            }, optionsRef.current.fetchTimeout);
+
+            client.scheduler.commit.onFetched(() => {
+              isFetchingRef.current = false;
+              clearTimeout(timeout);
+
+              resolve();
+            });
           });
-        });
 
-      if (noCache || !isFetchingGqless) {
-        if (
-          fetchPolicy === 'no-cache' ||
-          fetchPolicy === 'network-only' ||
-          fetchPolicy === 'cache-and-network'
-        ) {
-          client = new Client<Query>(schema.Query, fetchQuery);
-          queryClientRef.current = client;
+        if (noCache || !isFetchingGqless) {
+          if (fetchPolicy !== 'no-cache') {
+            setData(val);
+          }
 
-          query(client.query);
+          if (
+            fetchPolicy === 'no-cache' ||
+            fetchPolicy === 'network-only' ||
+            fetchPolicy === 'cache-and-network'
+          ) {
+            client = new Client<Query>(schema.Query, fetchQuery);
+            newClientCreated = true;
+            queryClientRef.current = client;
 
+            query(client.query);
+
+            promise = waitForGqlessFetch();
+          } else {
+            dispatch({ type: 'done' });
+          }
+        } else if (isFetchingGqless) {
           promise = waitForGqlessFetch();
         }
-      } else if (isFetchingGqless) {
-        promise = waitForGqlessFetch();
-      }
 
-      if (promise) {
-        await promise;
-        val = query(client.query);
-      }
-
-      setData(val);
-
-      return val;
-    },
-    [queryClientRef, setData, fetchQuery, queryFnRef, optionsRef, isFetchingRef]
-  );
-
-  if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
-    isFetchingRef.current = true;
-    queryCallback().catch((error) => {
-      console.error(error);
-    });
-  }
-
-  useEffect(() => {
-    if (pollInterval > 0) {
-      const interval = setInterval(async () => {
-        if (!isFetchingRef.current) {
-          isFetchingRef.current = true;
-          await queryCallback(undefined, 'network-only').catch(console.error);
-          isFetchingRef.current = false;
+        if (promise) {
+          await promise;
+          val = query(client.query);
         }
-      }, pollInterval);
 
-      return () => {
-        clearInterval(interval);
-      };
+        setData(val);
+
+        if (newClientCreated) {
+          client.cache.rootValue = SharedCache.mergeCache(
+            client.cache.rootValue
+          );
+        }
+
+        return val;
+      },
+      [
+        queryClientRef,
+        setData,
+        fetchQuery,
+        queryFnRef,
+        optionsRef,
+        isFetchingRef,
+      ]
+    );
+
+    if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
+      isFetchingRef.current = true;
+      queryCallback().catch((error) => {
+        console.error(error);
+      });
     }
 
-    return emptyCallback;
-  }, [pollInterval, queryCallback, isFetchingRef]);
+    useEffect(() => {
+      if (pollInterval > 0) {
+        const interval = setInterval(async () => {
+          if (!isFetchingRef.current) {
+            isFetchingRef.current = true;
+            await queryCallback(undefined, 'network-only').catch(console.error);
+            isFetchingRef.current = false;
+          }
+        }, pollInterval);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    if (process.env.NODE_ENV !== 'production') {
-      if (fetchPolicy === 'cache-only' || fetchPolicy === 'cache-first') {
-        console.warn(NoCacheMergeWarn);
+        return () => {
+          clearInterval(interval);
+        };
       }
-    }
-  }, [fetchPolicy]);
 
-  return useMemo(() => [{ ...state, data }, queryCallback], [
-    queryCallback,
-    state,
-    data,
-  ]);
+      return emptyCallback;
+    }, [pollInterval, queryCallback, isFetchingRef]);
+
+    useEffect(() => {
+      isMountedRef.current = true;
+    }, []);
+
+    return useMemo(() => [{ ...state, data }, queryCallback], [
+      queryCallback,
+      state,
+      data,
+    ]);
+  };
 };

@@ -1,6 +1,6 @@
 import 'isomorphic-unfetch';
 
-import { QueryFetcher } from 'gqless';
+import { QueryFetcher, Value, DataTrait } from 'gqless';
 import { GraphQLError } from 'graphql';
 import { Dispatch, useCallback, useRef } from 'react';
 
@@ -190,4 +190,35 @@ export const useFetchCallback = (args: {
     },
     [argsRef]
   );
+};
+
+function concatCacheMap(
+  map: Map<Value<DataTrait>, Set<string | number>>,
+  ...iterables: Map<Value<DataTrait>, Set<string | number>>[]
+) {
+  for (const iterable of iterables) {
+    for (const item of iterable) {
+      map.set(...item);
+    }
+  }
+}
+
+export const SharedCache = {
+  value: undefined as Value<DataTrait> | undefined,
+  initialCache: (cacheRootValue: Value<DataTrait>) => {
+    return SharedCache.value || (SharedCache.value = cacheRootValue);
+  },
+  mergeCache: (cacheRootValue: Value<DataTrait>) => {
+    if (SharedCache.value) {
+      concatCacheMap(SharedCache.value.references, cacheRootValue.references);
+      SharedCache.value.data = Object.assign(
+        {},
+        SharedCache.value.data,
+        cacheRootValue.data
+      );
+    } else {
+      SharedCache.value = cacheRootValue;
+    }
+    return SharedCache.value;
+  },
 };
