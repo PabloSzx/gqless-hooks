@@ -1,20 +1,12 @@
 import { Client, ObjectNode } from 'gqless';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 
 import {
   StateReducer,
   IState,
   LazyInitialState,
   Maybe,
-  NoCacheMergeWarn,
   useFetchCallback,
   CreateOptions,
   MutationOptions,
@@ -104,6 +96,9 @@ export const createUseMutation = <
       const val = mutation(mutationClient.query);
 
       setData(val);
+      dispatch({
+        type: 'done',
+      });
 
       SharedCache.mergeCache(mutationClient.cache.rootValue);
 

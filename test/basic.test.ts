@@ -20,9 +20,24 @@ afterAll(async () => {
   await isClosed;
 });
 
+const renderCount = () => {
+  let renders = { n: 0 };
+
+  const render = () => {
+    renders.n += 1;
+  };
+
+  return {
+    renders,
+    render,
+  };
+};
+
 describe('serverTest', () => {
   test('query works', async () => {
+    const nRender = renderCount();
     const { result } = renderHook(() => {
+      nRender.render();
       const hook = useQuery(({ hello }) => {
         const result = hello({
           name: 'zxc',
@@ -36,16 +51,24 @@ describe('serverTest', () => {
 
     expect(result.current[0].data).toBe(undefined);
     expect(result.current[0].state).toBe('loading');
+    expect(nRender.renders.n).toBe(1);
 
     await act(async () => {
       await waitForExpect(() => {
+        expect(nRender.renders.n).toBe(3);
+
         expect(result.current[0].state).toBe('done');
       });
     });
 
     expect(result.current[0].data).toBe('query zxc!');
 
+    const nRenderCache = renderCount();
+
+    expect(nRenderCache.renders.n).toBe(0);
+
     const otherQuery = renderHook(() => {
+      nRenderCache.render();
       const hook = useQuery(({ hello }) => {
         const result = hello({
           name: 'zxc',
@@ -57,8 +80,12 @@ describe('serverTest', () => {
       return hook;
     });
 
+    expect(nRenderCache.renders.n).toBe(2);
+
     expect(otherQuery.result.current[0].state).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
+
+    expect(nRenderCache.renders.n).toBe(2);
 
     const otherQueryNetwork = renderHook(() => {
       const hook = useQuery(
@@ -121,9 +148,6 @@ describe('serverTest', () => {
 
     await act(async () => {
       result.current[0]();
-      await waitForExpect(() => {
-        expect(result.current[1].state).toBe('loading');
-      });
       await waitForExpect(() => {
         expect(result.current[1].state).toBe('done');
       });

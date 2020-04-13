@@ -149,8 +149,6 @@ export const createUseQuery = <
             query(client.query);
 
             promise = waitForGqlessFetch();
-          } else {
-            dispatch({ type: 'done' });
           }
         } else if (isFetchingGqless) {
           promise = waitForGqlessFetch();
@@ -161,18 +159,22 @@ export const createUseQuery = <
           val = query(client.query);
         }
 
-        setData(val);
-
         if (newClientCreated) {
           client.cache.rootValue = SharedCache.mergeCache(
             client.cache.rootValue
           );
         }
 
+        setData(val);
+        dispatch({
+          type: 'done',
+        });
+
         return val;
       },
       [
         queryClientRef,
+        dispatch,
         setData,
         fetchQuery,
         queryFnRef,
@@ -211,9 +213,9 @@ export const createUseQuery = <
     }, []);
 
     return useMemo(() => [{ ...state, data }, queryCallback], [
-      queryCallback,
       state,
       data,
+      queryCallback,
     ]);
   };
 };

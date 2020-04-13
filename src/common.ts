@@ -2,7 +2,7 @@ import 'isomorphic-unfetch';
 
 import { QueryFetcher, Value, DataTrait } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, useCallback, useRef } from 'react';
+import { Dispatch, useCallback, useRef, useState } from 'react';
 
 export type CreateOptions<Schema> = {
   endpoint: string;
@@ -25,8 +25,10 @@ export interface QueryOptions<TData> extends CommonHookOptions<TData> {
 }
 export interface MutationOptions<TData> extends CommonHookOptions<TData> {}
 
+type FetchState = 'waiting' | 'loading' | 'error' | 'done';
+
 export type IState = {
-  state: 'waiting' | 'loading' | 'error' | 'done';
+  state: FetchState;
   errors?: GraphQLError[];
   called: boolean;
 };
@@ -49,33 +51,42 @@ export type Maybe<T> = T | null | undefined;
 
 type Headers = Record<string, string | number | boolean>;
 
-export const NoCacheMergeWarn =
-  'gqless-hooks | Caching merge still is not being handled in this version';
-
-export const LazyInitialState: IState = { state: 'waiting', called: false };
-export const EarlyInitialState: IState = { state: 'loading', called: true };
-
 export type IDispatch =
   | IDispatchAction<'loading'>
   | IDispatchAction<'done'>
   | IDispatchAction<'error', GraphQLError[]>;
 
+const LoadingReducerState: IState = {
+  state: 'loading',
+  called: true,
+};
+
+const DoneReducerState: IState = {
+  state: 'done',
+  called: true,
+};
+
+export const LazyInitialState: IState = {
+  state: 'waiting',
+  called: false,
+};
+export const EarlyInitialState: IState = LoadingReducerState;
+
 export const StateReducer = (
   reducerState: IState,
-  { type, payload }: IDispatch
+  action: IDispatch
 ): IState => {
-  switch (type) {
-    case 'done':
+  switch (action.type) {
+    case 'done': {
+      return DoneReducerState;
+    }
     case 'loading': {
-      return {
-        called: true,
-        state: type,
-      };
+      return LoadingReducerState;
     }
     case 'error': {
       return {
         called: true,
-        errors: payload,
+        errors: action.payload,
         state: 'error',
       };
     }
@@ -181,9 +192,6 @@ export const useFetchCallback = (args: {
         });
       } else {
         effects.onSuccessEffect?.();
-        dispatch({
-          type: 'done',
-        });
       }
 
       return json;
@@ -221,4 +229,12 @@ export const SharedCache = {
     }
     return SharedCache.value;
   },
+};
+
+const incrementParam = (num: number) => ++num;
+
+export const useUpdate = () => {
+  const [, setState] = useState(0);
+
+  return useCallback(() => setState(incrementParam), []);
 };
