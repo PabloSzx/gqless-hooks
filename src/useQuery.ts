@@ -167,14 +167,7 @@ export const createUseQuery = <
 
         return val;
       },
-      [
-        queryClientRef,
-        dispatch,
-        fetchQuery,
-        queryFnRef,
-        optionsRef,
-        isFetchingRef,
-      ]
+      [fetchQuery]
     );
 
     if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
@@ -200,7 +193,7 @@ export const createUseQuery = <
       }
 
       return emptyCallback;
-    }, [pollInterval, queryCallback, isFetchingRef]);
+    }, [pollInterval, queryCallback]);
 
     useEffect(() => {
       isMountedRef.current = true;

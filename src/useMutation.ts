@@ -109,7 +109,7 @@ export const createUseMutation = <
 
       return val;
     },
-    [dispatch, fetchMutation, mutationFnRef]
+    [fetchMutation]
   );
 
   return useMemo(() => [mutationCallback, state], [state, mutationCallback]);

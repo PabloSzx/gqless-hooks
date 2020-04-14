@@ -152,84 +152,81 @@ export const useFetchCallback = <TData>(args: {
   const argsRef = useRef(args);
   argsRef.current = args;
 
-  return useCallback<QueryFetcher>(
-    async (query, variables) => {
-      const {
-        dispatch,
-        endpoint,
-        fetchPolicy,
-        effects,
-        type = 'query',
-        creationHeaders,
-        headers,
-      } = argsRef.current;
+  return useCallback<QueryFetcher>(async (query, variables) => {
+    const {
+      dispatch,
+      endpoint,
+      fetchPolicy,
+      effects,
+      type = 'query',
+      creationHeaders,
+      headers,
+    } = argsRef.current;
 
-      effects.onPreEffect?.();
+    effects.onPreEffect?.();
 
-      switch (fetchPolicy) {
-        case 'cache-only': {
-          return {
-            data: null,
-          };
-        }
+    switch (fetchPolicy) {
+      case 'cache-only': {
+        return {
+          data: null,
+        };
       }
+    }
 
-      dispatch({ type: 'loading' });
+    dispatch({ type: 'loading' });
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...creationHeaders,
-          ...headers,
-        },
-        body: JSON.stringify({
-          query: type !== 'query' ? type + query : query,
-          variables,
-        }),
-        mode: 'cors',
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...creationHeaders,
+        ...headers,
+      },
+      body: JSON.stringify({
+        query: type !== 'query' ? type + query : query,
+        variables,
+      }),
+      mode: 'cors',
+    });
+
+    let json: any;
+
+    try {
+      json = await response.json();
+    } catch (err) {
+      effects.onErrorEffect?.(err);
+      throw err;
+    }
+
+    if (!response.ok) {
+      let errorPayload: GraphQLError[] | undefined;
+
+      errorPayload = json?.errors ?? (Array.isArray(json) ? json : undefined);
+
+      const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
+
+      effects.onErrorEffect?.(errorPayload ?? errorText);
+
+      dispatch({
+        type: 'error',
+        payload: errorPayload ?? [],
       });
 
-      let json: any;
+      throw new Error(errorText);
+    }
 
-      try {
-        json = await response.json();
-      } catch (err) {
-        effects.onErrorEffect?.(err);
-        throw err;
-      }
+    if (json?.errors) {
+      effects.onErrorEffect?.(json.errors);
+      dispatch({
+        type: 'error',
+        payload: json.errors,
+      });
+    } else {
+      effects.onSuccessEffect?.();
+    }
 
-      if (!response.ok) {
-        let errorPayload: GraphQLError[] | undefined;
-
-        errorPayload = json?.errors ?? (Array.isArray(json) ? json : undefined);
-
-        const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
-
-        effects.onErrorEffect?.(errorPayload ?? errorText);
-
-        dispatch({
-          type: 'error',
-          payload: errorPayload ?? [],
-        });
-
-        throw new Error(errorText);
-      }
-
-      if (json?.errors) {
-        effects.onErrorEffect?.(json.errors);
-        dispatch({
-          type: 'error',
-          payload: json.errors,
-        });
-      } else {
-        effects.onSuccessEffect?.();
-      }
-
-      return json;
-    },
-    [argsRef]
-  );
+    return json;
+  }, []);
 };
 
 function concatCacheMap(
