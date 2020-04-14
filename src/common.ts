@@ -84,9 +84,15 @@ export const StateReducer = <TData>(
 ): IState<TData> => {
   switch (action.type) {
     case 'done': {
+      if (reducerState.state === 'error') {
+        if (action.payload !== reducerState.data) {
+          return { ...reducerState, data: action.payload };
+        }
+        return reducerState;
+      }
       return {
-        state: 'done',
         called: true,
+        state: 'done',
         data: action.payload,
       };
     }
@@ -94,24 +100,27 @@ export const StateReducer = <TData>(
       if (reducerState.state === 'loading') return reducerState;
 
       return {
-        state: 'loading',
         called: true,
+        state: 'loading',
         data: reducerState.data,
       };
     }
     case 'error': {
       return {
         called: true,
-        errors: action.payload,
         state: 'error',
         data: reducerState.data,
+        errors: action.payload,
       };
     }
     case 'setData': {
-      return {
-        ...reducerState,
-        data: action.payload,
-      };
+      if (action.payload !== reducerState.data) {
+        return {
+          ...reducerState,
+          data: action.payload,
+        };
+      }
+      return reducerState;
     }
     default:
       return reducerState;
