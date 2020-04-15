@@ -19,6 +19,7 @@ type t_Query = FieldsType<
   {
     __typename: t_String<'Query'>;
     hello: FieldsTypeArg<{ name: string }, t_String>;
+    loremIpsum: t_String[];
   },
   Extension<'Query'>
 >;
@@ -37,6 +38,7 @@ type t_Mutation = FieldsType<
   {
     __typename: t_String<'Mutation'>;
     helloMutation: FieldsTypeArg<{ arg1: string }, t_String>;
+    resetLoremIpsum: t_String[];
   },
   Extension<'Mutation'>
 >;

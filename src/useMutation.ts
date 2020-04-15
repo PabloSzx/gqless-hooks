@@ -16,8 +16,8 @@ import {
 } from './common';
 
 const defaultOptions = <TData>(options: MutationOptions<TData>) => {
-  const { fetchTimeout = 10000, ...rest } = options;
-  return { fetchTimeout, ...rest };
+  const { fetchTimeout = 10000, cacheKeys = [], ...rest } = options;
+  return { fetchTimeout, cacheKeys, ...rest };
 };
 
 export type MutationFn<TData, Mutation> = (
@@ -98,16 +98,21 @@ export const createUseMutation = <
         });
       });
 
-      const val = mutation(mutationClient.query);
+      const dataValue = mutation(mutationClient.query);
 
       dispatch({
         type: 'done',
-        payload: val,
+        payload: dataValue,
       });
 
       SharedCache.mergeCache(mutationClient.cache.rootValue);
 
-      return val;
+      SharedCache.cacheChange(
+        undefined,
+        ...(optionsRef.current.cacheKeys || [])
+      );
+
+      return dataValue;
     },
     [fetchMutation]
   );

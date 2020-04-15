@@ -29,6 +29,13 @@ export const schema = {
             false
           );
         },
+        get loremIpsum() {
+          return new FieldNode(
+            new ArrayNode(schema.String, false),
+            undefined,
+            false
+          );
+        },
       },
       { name: 'Query', extension: ((extensions as any) || {}).Query }
     );
@@ -53,6 +60,13 @@ export const schema = {
               },
               true
             ),
+            false
+          );
+        },
+        get resetLoremIpsum() {
+          return new FieldNode(
+            new ArrayNode(schema.String, false),
+            undefined,
             false
           );
         },

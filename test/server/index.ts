@@ -3,16 +3,28 @@ import { resolve } from 'path';
 import { queryType, stringArg, makeSchema, mutationType } from '@nexus/schema';
 import bodyParser from 'body-parser';
 import { createGraphqlMiddleware } from 'express-gql';
-
+import { loremIpsum } from 'lorem-ipsum';
 const app = express();
 
 app.use(bodyParser.json());
+
+const loremIpsumArray: string[] = [];
 
 const Query = queryType({
   definition(t) {
     t.string('hello', {
       args: { name: stringArg({ nullable: false }) },
       resolve: (parent, { name }) => `query ${name}!`,
+    });
+    t.list.string('loremIpsum', {
+      nullable: false,
+      resolve: () => {
+        const a = loremIpsum();
+
+        loremIpsumArray.push(loremIpsum());
+
+        return loremIpsumArray;
+      },
     });
   },
 });
@@ -22,6 +34,14 @@ const Mutation = mutationType({
     t.string('helloMutation', {
       args: { arg1: stringArg({ nullable: false }) },
       resolve: (parent, { arg1 }) => `mutation ${arg1}`,
+    });
+    t.list.string('resetLoremIpsum', {
+      nullable: false,
+      resolve: () => {
+        loremIpsumArray.splice(0, loremIpsumArray.length);
+        loremIpsumArray.push(loremIpsum());
+        return loremIpsumArray;
+      },
     });
   },
 });

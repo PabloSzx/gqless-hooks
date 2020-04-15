@@ -33,7 +33,7 @@ const renderCount = () => {
   };
 };
 
-describe('serverTest', () => {
+describe('basic usage and cache', () => {
   test('query works', async () => {
     const nRender = renderCount();
     const { result } = renderHook(() => {
@@ -169,5 +169,72 @@ describe('serverTest', () => {
 
     expect(otherQuery.result.current[0].state).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
+  });
+});
+
+describe('multiple hooks usage and cache', () => {
+  test('array push and reset', async () => {
+    const { result } = renderHook(() => {
+      const query1 = useQuery(
+        ({ loremIpsum }) => {
+          return loremIpsum.map((v) => v);
+        },
+        {
+          cacheKeys: ['queryarray'],
+        }
+      );
+      const query2 = useQuery(
+        ({ loremIpsum }) => {
+          return loremIpsum.map((v) => v);
+        },
+        {
+          lazy: true,
+          cacheKeys: ['queryarray'],
+        }
+      );
+      const mutation1 = useMutation(
+        ({ resetLoremIpsum }) => {
+          return resetLoremIpsum;
+        },
+        {
+          cacheKeys: ['queryarray'],
+        }
+      );
+
+      return {
+        query1,
+        query2,
+        mutation1,
+      };
+    });
+
+    expect(result.current.query1[0].state).toBe('loading');
+    expect(result.current.query2[0].state).toBe('waiting');
+    expect(result.current.mutation1[1].state).toBe('waiting');
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(result.current.query1[0].state).toBe('done');
+      });
+    });
+
+    expect(result.current.query1[0].data).toHaveLength(1);
+
+    await act(async () => {
+      result.current.query2[1]();
+      await waitForExpect(() => {
+        expect(result.current.query2[0].data).toHaveLength(1);
+      });
+      await waitForExpect(() => {
+        expect(result.current.query2[0].state).toBe('done');
+      });
+    });
+
+    expect(result.current.query2[0].data).toHaveLength(2);
+
+    expect(result.current.query1[0].data).toHaveLength(2);
+
+    expect(result.current.query1[0].state).toBe('done');
+    expect(result.current.query2[0].state).toBe('done');
   });
 });

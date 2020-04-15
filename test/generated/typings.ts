@@ -35,9 +35,11 @@ export interface NexusGenAllTypes extends NexusGenRootTypes {
 export interface NexusGenFieldTypes {
   Mutation: { // field return type
     helloMutation: string; // String!
+    resetLoremIpsum: string[]; // [String!]!
   }
   Query: { // field return type
     hello: string; // String!
+    loremIpsum: string[]; // [String!]!
   }
 }
 

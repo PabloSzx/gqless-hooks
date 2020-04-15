@@ -2,7 +2,7 @@ import 'isomorphic-unfetch';
 
 import { QueryFetcher, Value, DataTrait } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, useCallback, useRef, useState, Reducer } from 'react';
+import { Dispatch, useCallback, useRef, Reducer } from 'react';
 
 export type CreateOptions<Schema> = {
   endpoint: string;
@@ -17,6 +17,7 @@ interface CommonHookOptions<TData> {
   context?: Record<string, any>;
   fetchTimeout?: number;
   headers?: Headers;
+  cacheKeys?: string[];
 }
 
 export interface QueryOptions<TData> extends CommonHookOptions<TData> {
@@ -52,7 +53,7 @@ export type Maybe<T> = T | null | undefined;
 
 type Headers = Record<string, string | number | boolean>;
 
-export type IDispatch<TData extends any> =
+export type IDispatch<TData> =
   | IDispatchAction<'loading'>
   | IDispatchAction<'done', Maybe<TData>>
   | IDispatchAction<'error', GraphQLError[]>
@@ -242,8 +243,49 @@ function concatCacheMap(
 
 export const SharedCache = {
   value: undefined as Value<DataTrait> | undefined,
+  cacheListenersMap: new Map<string, Array<() => void>>(),
+  cacheChange: (
+    emitterListener: (() => void) | undefined,
+    ...cacheKeys: string[]
+  ) => {
+    for (const cacheKey of cacheKeys) {
+      const cacheListeners = SharedCache.cacheListenersMap.get(cacheKey);
+      if (cacheListeners) {
+        for (const listenerFn of cacheListeners) {
+          if (emitterListener !== listenerFn) {
+            listenerFn();
+          }
+        }
+      }
+    }
+  },
+  subscribeCacheListener: (listenerFn: () => void, ...keys: string[]) => {
+    for (const key of keys) {
+      const cacheListeners = SharedCache.cacheListenersMap.get(key);
+      if (cacheListeners) {
+        cacheListeners.push(listenerFn);
+      } else {
+        SharedCache.cacheListenersMap.set(key, [listenerFn]);
+      }
+    }
+  },
+  unsubscribeCacheListener: (listenerFn: () => void, ...keys: string[]) => {
+    for (const key of keys) {
+      const cacheListeners = SharedCache.cacheListenersMap.get(key);
+      if (cacheListeners) {
+        cacheListeners.splice(cacheListeners.indexOf(listenerFn));
+        if (cacheListeners.length === 0) {
+          SharedCache.cacheListenersMap.delete(key);
+        }
+      }
+    }
+  },
   initialCache: (cacheRootValue: Value<DataTrait>) => {
-    return SharedCache.value || (SharedCache.value = cacheRootValue);
+    if (SharedCache.value === undefined) {
+      SharedCache.value = cacheRootValue;
+    }
+
+    return SharedCache.value;
   },
   mergeCache: (cacheRootValue: Value<DataTrait>) => {
     if (SharedCache.value) {
@@ -258,12 +300,4 @@ export const SharedCache = {
     }
     return SharedCache.value;
   },
-};
-
-const incrementParam = (num: number) => ++num;
-
-export const useUpdate = () => {
-  const [, setState] = useState(0);
-
-  return useCallback(() => setState(incrementParam), []);
 };

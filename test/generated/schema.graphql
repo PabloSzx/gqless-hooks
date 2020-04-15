@@ -4,8 +4,10 @@
 
 type Mutation {
   helloMutation(arg1: String!): String!
+  resetLoremIpsum: [String!]!
 }
 
 type Query {
   hello(name: String!): String!
+  loremIpsum: [String!]!
 }
