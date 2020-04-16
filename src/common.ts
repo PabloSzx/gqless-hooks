@@ -90,9 +90,17 @@ export const StateReducer = <TData>(
   switch (action.type) {
     case 'done': {
       if (reducerState.state === 'error') {
-        if (action.payload !== reducerState.data) {
+        if (
+          JSON.stringify(action.payload) !== JSON.stringify(reducerState.data)
+        ) {
           return { ...reducerState, data: action.payload };
         }
+        return reducerState;
+      }
+      if (
+        reducerState.state === 'done' &&
+        JSON.stringify(action.payload) === JSON.stringify(reducerState.data)
+      ) {
         return reducerState;
       }
       return {
@@ -119,7 +127,9 @@ export const StateReducer = <TData>(
       };
     }
     case 'setData': {
-      if (action.payload !== reducerState.data) {
+      if (
+        JSON.stringify(action.payload) !== JSON.stringify(reducerState.data)
+      ) {
         return {
           ...reducerState,
           data: action.payload,
@@ -247,6 +257,7 @@ function concatCacheMap(
 
 export const SharedCache = {
   value: undefined as Value<DataTrait> | undefined,
+
   initialCache: (cacheRootValue: Value<DataTrait>) => {
     if (SharedCache.value === undefined) {
       SharedCache.value = cacheRootValue;
@@ -254,6 +265,7 @@ export const SharedCache = {
 
     return SharedCache.value;
   },
+
   mergeCache: (cacheRootValue: Value<DataTrait>) => {
     if (SharedCache.value) {
       concatCacheMap(SharedCache.value.references, cacheRootValue.references);

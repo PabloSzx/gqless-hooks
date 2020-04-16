@@ -111,7 +111,7 @@ describe('basic usage and cache', () => {
     await act(async () => {
       await waitForExpect(() => {
         expect(otherQueryNetwork.result.current[0].state).toBe('done');
-      });
+      }, 500);
     });
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
 
@@ -151,7 +151,7 @@ describe('basic usage and cache', () => {
       result.current[0]();
       await waitForExpect(() => {
         expect(result.current[1].state).toBe('done');
-      });
+      }, 500);
     });
 
     expect(result.current[1].data).toBe('mutation zxc');
@@ -219,16 +219,25 @@ describe('detect variables change', () => {
 describe('multiple hooks usage and cache', () => {
   test('array push and reset', async () => {
     const { result } = renderHook(() => {
-      const query1 = useQuery(({ loremIpsum }, args) => {
-        return loremIpsum.map((v) => v);
-      }, {});
+      const query1 = useQuery(
+        ({ loremIpsum }, args) => {
+          return loremIpsum.map((v) => v);
+        },
+        {
+          headers: {
+            query1: '',
+          },
+        }
+      );
       const query2 = useQuery(
         ({ loremIpsum }, args) => {
           return loremIpsum.map((v) => v);
         },
         {
           lazy: true,
-
+          headers: {
+            query2: '',
+          },
           fetchPolicy: 'cache-and-network',
         }
       );
@@ -256,7 +265,7 @@ describe('multiple hooks usage and cache', () => {
     expect(result.current.query1[0].data).toHaveLength(1);
 
     await act(async () => {
-      await result.current.query2[1]();
+      await result.current.query2[1].refetch();
     });
 
     expect(result.current.query2[0].state).toBe('done');
@@ -264,7 +273,8 @@ describe('multiple hooks usage and cache', () => {
     expect(result.current.query2[0].data).toHaveLength(2);
 
     await act(async () => {
-      await result.current.query1[1]({ fetchPolicy: 'cache-only' });
+      await result.current.query1[1].cacheRefetch();
+
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(2);
       }, 500);
@@ -280,13 +290,13 @@ describe('multiple hooks usage and cache', () => {
       expect(result.current.mutation1[1].state).toBe('done');
       expect(result.current.mutation1[1].data).toHaveLength(0);
 
-      await result.current.query1[1]({ fetchPolicy: 'cache-and-network' });
+      await result.current.query1[1].refetch();
 
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(1);
       }, 500);
 
-      await result.current.query2[1]({ fetchPolicy: 'cache-only' });
+      await result.current.query2[1].cacheRefetch();
 
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(1);
@@ -296,5 +306,5 @@ describe('multiple hooks usage and cache', () => {
         );
       }, 500);
     });
-  });
+  }, 10000);
 });

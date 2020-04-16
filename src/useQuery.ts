@@ -27,6 +27,10 @@ type QueryCallback<TData, Query, TVariables extends IVariables> = (queryArgs?: {
   variables?: TVariables;
 }) => Promise<Maybe<TData>>;
 
+type QueryQuickCallback<TData, TVariables extends IVariables> = (queryArgs?: {
+  variables?: TVariables;
+}) => Promise<Maybe<TData>>;
+
 const defaultOptions = <TData, TVariables extends IVariables>(
   options: QueryOptions<TData, TVariables>
 ) => {
@@ -59,7 +63,11 @@ export const createUseQuery = <
     options: QueryOptions<TData, TVariables> = {}
   ): [
     IState<TData> & { data: Maybe<TData> },
-    QueryCallback<TData, Query, TVariables>
+    {
+      refetch: QueryQuickCallback<TData, TVariables>;
+      cacheRefetch: QueryQuickCallback<TData, TVariables>;
+      query: QueryCallback<TData, Query, TVariables>;
+    }
   ] => {
     const optionsRef = useRef(options);
     const {
@@ -226,9 +234,9 @@ export const createUseQuery = <
         const interval = setInterval(async () => {
           if (!isFetchingRef.current) {
             isFetchingRef.current = true;
-            await queryCallback({ fetchPolicy: 'network-only' }).catch(
-              console.error
-            );
+            await queryCallbackRef
+              .current({ fetchPolicy: 'network-only' })
+              .catch(console.error);
             isFetchingRef.current = false;
           }
         }, pollInterval);
@@ -239,7 +247,7 @@ export const createUseQuery = <
       }
 
       return emptyCallback;
-    }, [pollInterval, queryCallback]);
+    }, [pollInterval]);
 
     const isFirstMountRef = useRef(true);
 
@@ -262,6 +270,28 @@ export const createUseQuery = <
       isMountedRef.current = true;
     }, []);
 
-    return useMemo(() => [state, queryCallback], [state, queryCallback]);
+    const callbacks = useMemo<{
+      refetch: QueryQuickCallback<TData, TVariables>;
+      cacheRefetch: QueryQuickCallback<TData, TVariables>;
+      query: QueryCallback<TData, Query, TVariables>;
+    }>(() => {
+      return {
+        refetch: (args) => {
+          return queryCallbackRef.current({
+            variables: args?.variables,
+            fetchPolicy: 'cache-and-network',
+          });
+        },
+        cacheRefetch: (args) => {
+          return queryCallbackRef.current({
+            variables: args?.variables,
+            fetchPolicy: 'cache-only',
+          });
+        },
+        query: queryCallbackRef.current,
+      };
+    }, []);
+
+    return useMemo(() => [state, callbacks], [state, callbacks]);
   };
 };
