@@ -13,15 +13,28 @@ import {
   SharedCache,
   StateReducerInitialState,
   IStateReducer,
+  IVariables,
 } from './common';
 
-const defaultOptions = <TData>(options: MutationOptions<TData>) => {
-  const { fetchTimeout = 10000, cacheKeys = [], ...rest } = options;
-  return { fetchTimeout, cacheKeys, ...rest };
+type MutationCallback<
+  TData,
+  Mutation,
+  TVariables extends IVariables
+> = (mutationArgs?: {
+  mutation?: MutationFn<TData, Mutation, TVariables>;
+  variables?: TVariables;
+}) => Promise<TData>;
+
+const defaultOptions = <TData, TVariables extends IVariables>(
+  options: MutationOptions<TData, TVariables>
+) => {
+  const { fetchTimeout = 10000, ...rest } = options;
+  return { fetchTimeout, ...rest };
 };
 
-export type MutationFn<TData, Mutation> = (
-  schema: Client<Mutation>['query']
+export type MutationFn<TData, Mutation, TVariables extends IVariables> = (
+  schema: Client<Mutation>['query'],
+  variables: TVariables
 ) => TData;
 
 export const createUseMutation = <
@@ -31,11 +44,11 @@ export const createUseMutation = <
   endpoint,
   schema,
   headers: creationHeaders,
-}: CreateOptions<Schema>) => <TData = unknown>(
-  mutationFn: MutationFn<TData, Mutation>,
-  options: MutationOptions<TData> = {}
+}: CreateOptions<Schema>) => <TData, TVariables extends IVariables>(
+  mutationFn: MutationFn<TData, Mutation, TVariables>,
+  options: MutationOptions<TData, TVariables> = {}
 ): [
-  (mutationFn?: MutationFn<TData, Mutation>) => Promise<TData>,
+  MutationCallback<TData, Mutation, TVariables>,
   IState<TData> & { data: Maybe<TData> }
 ] => {
   const optionsRef = useRef(options);
@@ -75,17 +88,21 @@ export const createUseMutation = <
   });
 
   const mutationCallback = useCallback<
-    (mutationFnArg?: MutationFn<TData, Mutation>) => Promise<TData>
+    MutationCallback<TData, Mutation, TVariables>
   >(
-    async (mutationFnArg) => {
-      const mutation = mutationFnArg || mutationFnRef.current;
+    async (mutationArgs) => {
+      let { mutation = mutationFnRef.current, variables: variablesArgs } =
+        mutationArgs || {};
+
+      const variables: TVariables =
+        variablesArgs || optionsRef.current.variables || ({} as TVariables);
 
       const mutationClient = new Client<Mutation>(
         schema.Mutation,
         fetchMutation
       );
 
-      mutation(mutationClient.query);
+      mutation(mutationClient.query, variables);
 
       await new Promise((resolve) => {
         const timeout = setTimeout(() => {
@@ -98,7 +115,7 @@ export const createUseMutation = <
         });
       });
 
-      const dataValue = mutation(mutationClient.query);
+      const dataValue = mutation(mutationClient.query, variables);
 
       dispatch({
         type: 'done',
@@ -106,11 +123,6 @@ export const createUseMutation = <
       });
 
       SharedCache.mergeCache(mutationClient.cache.rootValue);
-
-      SharedCache.cacheChange(
-        undefined,
-        ...(optionsRef.current.cacheKeys || [])
-      );
 
       return dataValue;
     },

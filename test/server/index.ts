@@ -5,7 +5,7 @@ import bodyParser from 'body-parser';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
 const app = express();
-
+import wait from 'waait';
 app.use(bodyParser.json());
 
 const loremIpsumArray: string[] = [];
@@ -18,8 +18,8 @@ const Query = queryType({
     });
     t.list.string('loremIpsum', {
       nullable: false,
-      resolve: () => {
-        const a = loremIpsum();
+      resolve: async () => {
+        // await wait(300);
 
         loremIpsumArray.push(loremIpsum());
 
@@ -37,9 +37,11 @@ const Mutation = mutationType({
     });
     t.list.string('resetLoremIpsum', {
       nullable: false,
-      resolve: () => {
+      resolve: async () => {
+        // await wait(200);
+
         loremIpsumArray.splice(0, loremIpsumArray.length);
-        loremIpsumArray.push(loremIpsum());
+
         return loremIpsumArray;
       },
     });

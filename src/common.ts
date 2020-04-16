@@ -10,21 +10,25 @@ export type CreateOptions<Schema> = {
   headers?: Record<string, string>;
 };
 
-interface CommonHookOptions<TData> {
+export type IVariables = Record<string, unknown>;
+
+interface CommonHookOptions<TData, TVariables extends IVariables> {
   fetchPolicy?: FetchPolicy;
   onCompleted?: (data: Maybe<TData>) => void;
   onError?: (errors: GraphQLError[]) => void;
   context?: Record<string, any>;
   fetchTimeout?: number;
   headers?: Headers;
-  cacheKeys?: string[];
+  variables?: TVariables;
 }
 
-export interface QueryOptions<TData> extends CommonHookOptions<TData> {
+export interface QueryOptions<TData, TVariables extends IVariables>
+  extends CommonHookOptions<TData, TVariables> {
   lazy?: boolean;
   pollInterval?: number;
 }
-export interface MutationOptions<TData> extends CommonHookOptions<TData> {}
+export interface MutationOptions<TData, TVariables extends IVariables>
+  extends CommonHookOptions<TData, TVariables> {}
 
 type FetchState = 'waiting' | 'loading' | 'error' | 'done';
 
@@ -243,43 +247,6 @@ function concatCacheMap(
 
 export const SharedCache = {
   value: undefined as Value<DataTrait> | undefined,
-  cacheListenersMap: new Map<string, Array<() => void>>(),
-  cacheChange: (
-    emitterListener: (() => void) | undefined,
-    ...cacheKeys: string[]
-  ) => {
-    for (const cacheKey of cacheKeys) {
-      const cacheListeners = SharedCache.cacheListenersMap.get(cacheKey);
-      if (cacheListeners) {
-        for (const listenerFn of cacheListeners) {
-          if (emitterListener !== listenerFn) {
-            listenerFn();
-          }
-        }
-      }
-    }
-  },
-  subscribeCacheListener: (listenerFn: () => void, ...keys: string[]) => {
-    for (const key of keys) {
-      const cacheListeners = SharedCache.cacheListenersMap.get(key);
-      if (cacheListeners) {
-        cacheListeners.push(listenerFn);
-      } else {
-        SharedCache.cacheListenersMap.set(key, [listenerFn]);
-      }
-    }
-  },
-  unsubscribeCacheListener: (listenerFn: () => void, ...keys: string[]) => {
-    for (const key of keys) {
-      const cacheListeners = SharedCache.cacheListenersMap.get(key);
-      if (cacheListeners) {
-        cacheListeners.splice(cacheListeners.indexOf(listenerFn));
-        if (cacheListeners.length === 0) {
-          SharedCache.cacheListenersMap.delete(key);
-        }
-      }
-    }
-  },
   initialCache: (cacheRootValue: Value<DataTrait>) => {
     if (SharedCache.value === undefined) {
       SharedCache.value = cacheRootValue;

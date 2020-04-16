@@ -75,6 +75,7 @@
     "tsdx": "^0.13.2",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3",
+    "waait": "^1.0.5",
     "wait-for-expect": "^3.0.2",
     "wait-on": "^4.0.2"
   },

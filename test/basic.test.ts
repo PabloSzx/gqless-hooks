@@ -6,6 +6,7 @@ import {
 } from '@testing-library/react-hooks';
 import { useQuery, useMutation } from './generated/graphql/client';
 import waitForExpect from 'wait-for-expect';
+import { useState } from 'react';
 
 afterEach(async () => {
   await cleanupHooks();
@@ -58,7 +59,7 @@ describe('basic usage and cache', () => {
         expect(nRender.renders.n).toBe(2);
 
         expect(result.current[0].state).toBe('done');
-      });
+      }, 500);
     });
 
     expect(result.current[0].data).toBe('query zxc!');
@@ -172,34 +173,68 @@ describe('basic usage and cache', () => {
   });
 });
 
+describe('detect variables change', () => {
+  test('query variables', async () => {
+    const query = renderHook(() => {
+      const nameState = useState('cvb');
+      const hook = useQuery(
+        ({ hello }, { name }) => {
+          const result = hello({
+            name,
+          });
+
+          return result;
+        },
+        {
+          variables: {
+            name: nameState[0],
+          },
+        }
+      );
+
+      return { hook, nameState };
+    });
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].state).toBe('done');
+      }, 500);
+    });
+    expect(query.result.current.hook[0].data).toBe('query cvb!');
+
+    await act(async () => {
+      query.result.current.nameState[1]('jkl');
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].state).toBe('loading');
+      }, 500);
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].state).toBe('done');
+      }, 500);
+    });
+
+    expect(query.result.current.hook[0].data).toBe('query jkl!');
+  });
+});
+
 describe('multiple hooks usage and cache', () => {
   test('array push and reset', async () => {
     const { result } = renderHook(() => {
-      const query1 = useQuery(
-        ({ loremIpsum }) => {
-          return loremIpsum.map((v) => v);
-        },
-        {
-          cacheKeys: ['queryarray'],
-        }
-      );
+      const query1 = useQuery(({ loremIpsum }, args) => {
+        return loremIpsum.map((v) => v);
+      }, {});
       const query2 = useQuery(
-        ({ loremIpsum }) => {
+        ({ loremIpsum }, args) => {
           return loremIpsum.map((v) => v);
         },
         {
           lazy: true,
-          cacheKeys: ['queryarray'],
+
+          fetchPolicy: 'cache-and-network',
         }
       );
-      const mutation1 = useMutation(
-        ({ resetLoremIpsum }) => {
-          return resetLoremIpsum;
-        },
-        {
-          cacheKeys: ['queryarray'],
-        }
-      );
+      const mutation1 = useMutation(({ resetLoremIpsum }, { a }) => {
+        return resetLoremIpsum.map((v) => v);
+      }, {});
 
       return {
         query1,
@@ -215,26 +250,51 @@ describe('multiple hooks usage and cache', () => {
     await act(async () => {
       await waitForExpect(() => {
         expect(result.current.query1[0].state).toBe('done');
-      });
+      }, 500);
     });
 
     expect(result.current.query1[0].data).toHaveLength(1);
 
     await act(async () => {
-      result.current.query2[1]();
-      await waitForExpect(() => {
-        expect(result.current.query2[0].data).toHaveLength(1);
-      });
-      await waitForExpect(() => {
-        expect(result.current.query2[0].state).toBe('done');
-      });
+      await result.current.query2[1]();
     });
+
+    expect(result.current.query2[0].state).toBe('done');
 
     expect(result.current.query2[0].data).toHaveLength(2);
 
-    expect(result.current.query1[0].data).toHaveLength(2);
+    await act(async () => {
+      await result.current.query1[1]({ fetchPolicy: 'cache-only' });
+      await waitForExpect(() => {
+        expect(result.current.query1[0].data).toHaveLength(2);
+      }, 500);
+    });
 
     expect(result.current.query1[0].state).toBe('done');
     expect(result.current.query2[0].state).toBe('done');
+
+    await act(async () => {
+      expect(result.current.mutation1[1].state).toBe('waiting');
+
+      await result.current.mutation1[0]();
+      expect(result.current.mutation1[1].state).toBe('done');
+      expect(result.current.mutation1[1].data).toHaveLength(0);
+
+      await result.current.query1[1]({ fetchPolicy: 'cache-and-network' });
+
+      await waitForExpect(() => {
+        expect(result.current.query1[0].data).toHaveLength(1);
+      }, 500);
+
+      await result.current.query2[1]({ fetchPolicy: 'cache-only' });
+
+      await waitForExpect(() => {
+        expect(result.current.query1[0].data).toHaveLength(1);
+
+        expect(result.current.query1[0].data).toEqual(
+          result.current.query2[0].data
+        );
+      }, 500);
+    });
   });
 });

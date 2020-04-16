@@ -1,6 +1,5 @@
 import { Client, ObjectNode } from 'gqless';
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
-
 import {
   IState,
   Maybe,
@@ -14,25 +13,37 @@ import {
   SharedCache,
   StateReducerInitialState,
   IStateReducer,
+  IVariables,
 } from './common';
 
-export type QueryFn<TData, Query> = (schema: Client<Query>['query']) => TData;
+export type QueryFn<TData, Query, TVariables extends IVariables> = (
+  schema: Client<Query>['query'],
+  variables: TVariables
+) => TData;
 
-type QueryCallback<TData, Query> = (
-  queryFnArg?: QueryFn<TData, Query>,
-  fetchPolicy?: FetchPolicy
-) => Promise<Maybe<TData>>;
+type QueryCallback<TData, Query, TVariables extends IVariables> = (queryArgs?: {
+  query?: QueryFn<TData, Query, TVariables>;
+  fetchPolicy?: FetchPolicy;
+  variables?: TVariables;
+}) => Promise<Maybe<TData>>;
 
-const defaultOptions = <TData>(options: QueryOptions<TData>) => {
+const defaultOptions = <TData, TVariables extends IVariables>(
+  options: QueryOptions<TData, TVariables>
+) => {
   const {
     lazy = false,
     fetchPolicy = options.lazy ? 'cache-and-network' : 'cache-first',
     fetchTimeout = 10000,
     pollInterval = 0,
-    cacheKeys = [],
     ...rest
   } = options;
-  return { lazy, fetchPolicy, fetchTimeout, pollInterval, cacheKeys, ...rest };
+  return {
+    lazy,
+    fetchPolicy,
+    fetchTimeout,
+    pollInterval,
+    ...rest,
+  };
 };
 
 export const createUseQuery = <
@@ -43,17 +54,20 @@ export const createUseQuery = <
   schema,
   headers: creationHeaders,
 }: CreateOptions<Schema>) => {
-  return <TData = unknown>(
-    queryFn: QueryFn<TData, Query>,
-    options: QueryOptions<TData> = {}
-  ): [IState<TData> & { data: Maybe<TData> }, QueryCallback<TData, Query>] => {
+  return <TData, TVariables extends IVariables>(
+    queryFn: QueryFn<TData, Query, TVariables>,
+    options: QueryOptions<TData, TVariables> = {}
+  ): [
+    IState<TData> & { data: Maybe<TData> },
+    QueryCallback<TData, Query, TVariables>
+  ] => {
     const optionsRef = useRef(options);
     const {
       lazy,
       fetchPolicy,
       pollInterval,
       headers,
-      cacheKeys,
+      variables,
     } = (optionsRef.current = defaultOptions(options));
 
     const isMountedRef = useRef(false);
@@ -61,8 +75,6 @@ export const createUseQuery = <
 
     const queryFnRef = useRef(queryFn);
     queryFnRef.current = queryFn;
-
-    const subscribeRef = useRef<(() => void) | undefined>();
 
     const [state, dispatch] = useReducer<IStateReducer<TData>>(
       StateReducer,
@@ -93,11 +105,17 @@ export const createUseQuery = <
 
     const queryClientRef = useRef<Client<Query>>(initialQueryClient);
 
-    const queryCallback = useCallback<QueryCallback<TData, Query>>(
-      async (
-        query = queryFnRef.current,
-        fetchPolicy = optionsRef.current.fetchPolicy
-      ) => {
+    const queryCallback = useCallback<QueryCallback<TData, Query, TVariables>>(
+      async (queryArgs) => {
+        let {
+          query = queryFnRef.current,
+          fetchPolicy = optionsRef.current.fetchPolicy,
+          variables: variablesArgs,
+        } = queryArgs || {};
+
+        const variables =
+          variablesArgs || optionsRef.current.variables || ({} as TVariables);
+
         let client: Client<Query> = queryClientRef.current;
 
         let dataValue: Maybe<TData> = null;
@@ -111,7 +129,7 @@ export const createUseQuery = <
         if (fetchPolicy === 'network-only' || fetchPolicy === 'no-cache') {
           noCache = true;
         } else {
-          dataValue = query(client.query);
+          dataValue = query(client.query, variables);
         }
 
         let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
@@ -124,6 +142,9 @@ export const createUseQuery = <
             type: 'done',
             payload: dataValue,
           });
+          if (!isFetchingGqless) {
+            isFetchingRef.current = false;
+          }
 
           return dataValue;
         }
@@ -161,7 +182,7 @@ export const createUseQuery = <
             newClientCreated = true;
             queryClientRef.current = client;
 
-            query(client.query);
+            query(client.query, variables);
 
             fetchPromise = waitForGqlessFetch();
           }
@@ -171,7 +192,7 @@ export const createUseQuery = <
 
         if (fetchPromise) {
           await fetchPromise;
-          dataValue = query(client.query);
+          dataValue = query(client.query, variables);
         }
 
         if (newClientCreated) {
@@ -179,11 +200,6 @@ export const createUseQuery = <
             client.cache.rootValue
           );
         }
-
-        SharedCache.cacheChange(
-          subscribeRef.current,
-          ...(optionsRef.current.cacheKeys || [])
-        );
 
         dispatch({
           type: 'done',
@@ -198,47 +214,6 @@ export const createUseQuery = <
     const queryCallbackRef = useRef(queryCallback);
     queryCallbackRef.current = queryCallback;
 
-    const { subscribeFn } = useMemo(() => {
-      if (cacheKeys.length) {
-        const subscribeFn = () => {
-          if (
-            !isFetchingRef.current &&
-            (optionsRef.current.lazy ? stateRef.current.called : true)
-          ) {
-            isFetchingRef.current = true;
-            queryCallbackRef.current(undefined, 'cache-first');
-          }
-        };
-
-        subscribeRef.current = subscribeFn;
-
-        return {
-          subscribeFn,
-        };
-      }
-
-      subscribeRef.current = undefined;
-
-      return {};
-    }, [cacheKeys.length]);
-
-    useEffect(() => {
-      if (subscribeFn) {
-        SharedCache.subscribeCacheListener(
-          subscribeFn,
-          ...(optionsRef.current.cacheKeys || [])
-        );
-
-        return () => {
-          SharedCache.unsubscribeCacheListener(
-            subscribeFn,
-            ...(optionsRef.current.cacheKeys || [])
-          );
-        };
-      }
-      return undefined;
-    }, [subscribeFn]);
-
     if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
       isFetchingRef.current = true;
       queryCallback().catch((error) => {
@@ -251,7 +226,9 @@ export const createUseQuery = <
         const interval = setInterval(async () => {
           if (!isFetchingRef.current) {
             isFetchingRef.current = true;
-            await queryCallback(undefined, 'network-only').catch(console.error);
+            await queryCallback({ fetchPolicy: 'network-only' }).catch(
+              console.error
+            );
             isFetchingRef.current = false;
           }
         }, pollInterval);
@@ -263,6 +240,23 @@ export const createUseQuery = <
 
       return emptyCallback;
     }, [pollInterval, queryCallback]);
+
+    const isFirstMountRef = useRef(true);
+
+    const serializedVariables = variables ? JSON.stringify(variables) : '';
+
+    useEffect(() => {
+      if (isFirstMountRef.current) {
+        isFirstMountRef.current = false;
+      } else if (
+        optionsRef.current.variables && optionsRef.current.lazy
+          ? stateRef.current.called
+          : true
+      ) {
+        isFetchingRef.current = true;
+        queryCallbackRef.current().catch(console.error);
+      }
+    }, [serializedVariables]);
 
     useEffect(() => {
       isMountedRef.current = true;
