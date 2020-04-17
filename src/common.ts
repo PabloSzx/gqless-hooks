@@ -14,11 +14,12 @@ export type IVariables = Record<string, unknown>;
 
 interface CommonHookOptions<TData, TVariables extends IVariables> {
   fetchPolicy?: FetchPolicy;
-  onCompleted?: (data: Maybe<TData>) => void;
+  onCompleted?: (data: Maybe<TData>, hooksPool: HooksPool) => void;
   onError?: (errors: GraphQLError[]) => void;
   fetchTimeout?: number;
   headers?: Headers;
   variables?: TVariables;
+  hookId?: string;
 }
 
 export interface QueryOptions<TData, TVariables extends IVariables>
@@ -283,6 +284,16 @@ function concatCacheMap(
   }
 }
 
+export type HooksPool = Record<string, HookPoolData | undefined>;
+
+export type HookPoolData = {
+  callback: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
+    variables?: Variables;
+    fetchPolicy?: FetchPolicy;
+  }) => Promise<Maybe<Data>>;
+  state: { current: IState<any> };
+};
+
 export const SharedCache = {
   value: undefined as Value<DataTrait> | undefined,
 
@@ -292,6 +303,20 @@ export const SharedCache = {
     SharedCache.cacheSubscribers.add(fn);
     return () => {
       SharedCache.cacheSubscribers.delete(fn);
+    };
+  },
+
+  hooksPool: {} as HooksPool,
+
+  subscribeHookPool: (hookId: string, data: HookPoolData) => {
+    if (process.env.NODE_ENV !== 'production') {
+      if (hookId in SharedCache.hooksPool) {
+        console.warn('Duplicated hook id, previous hook overwriten!');
+      }
+    }
+    SharedCache.hooksPool[hookId] = data;
+    return () => {
+      delete SharedCache.hooksPool[hookId];
     };
   },
 

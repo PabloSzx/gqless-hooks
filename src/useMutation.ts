@@ -1,9 +1,10 @@
 import { Client, ObjectNode } from 'gqless';
-import { useCallback, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import {
   CreateOptions,
   defaultEmptyObject,
+  FetchPolicy,
   IState,
   IStateReducer,
   IVariables,
@@ -23,6 +24,7 @@ type MutationCallback<
 > = (mutationArgs?: {
   mutation?: MutationFn<TData, Mutation, TVariables>;
   variables?: TVariables;
+  fetchPolicy?: FetchPolicy;
 }) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
@@ -52,7 +54,9 @@ export const createUseMutation = <
   IState<TData> & { query: Mutation }
 ] => {
   const optionsRef = useRef(options);
-  const { fetchPolicy } = (optionsRef.current = defaultOptions(options));
+  const { fetchPolicy, hookId } = (optionsRef.current = defaultOptions(
+    options
+  ));
 
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
@@ -61,6 +65,8 @@ export const createUseMutation = <
     StateReducer,
     StateReducerInitialState<TData>(true)
   );
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const fetchMutation = useFetchCallback<TData, TVariables>({
     dispatch,
@@ -101,7 +107,10 @@ export const createUseMutation = <
       const {
         mutation = mutationFnRef.current,
         variables: variablesArgs,
+        fetchPolicy = optionsRef.current.fetchPolicy,
       } = mutationArgs;
+
+      optionsRef.current.fetchPolicy = fetchPolicy;
 
       const variables: TVariables =
         variablesArgs ||
@@ -129,21 +138,49 @@ export const createUseMutation = <
 
       const dataValue = mutation(client.query, variables);
 
-      client.cache.rootValue = SharedCache.mergeCache(client.cache.rootValue);
+      if (fetchPolicy !== 'no-cache') {
+        client.cache.rootValue = SharedCache.mergeCache(client.cache.rootValue);
 
-      mutationClientRef.current = client;
+        mutationClientRef.current = client;
+      }
 
       dispatch({
         type: 'done',
         payload: dataValue,
       });
 
-      optionsRef.current.onCompleted?.(dataValue);
-
       return dataValue;
     },
     [fetchMutation]
   );
+  const mutationCallbackRef = useRef(mutationCallback);
+  mutationCallbackRef.current = mutationCallback;
+
+  useEffect(() => {
+    if (hookId) {
+      return SharedCache.subscribeHookPool(hookId, {
+        callback: async (args) => {
+          const variables = args?.variables as TVariables | undefined;
+          const fetchPolicy = args?.fetchPolicy;
+          return (await mutationCallbackRef.current({
+            variables,
+            fetchPolicy,
+          })) as any;
+        },
+        state: stateRef,
+      });
+    }
+    return undefined;
+  }, [hookId]);
+
+  const isStateDone = state.state === 'done';
+
+  useEffect(() => {
+    const onCompleted = optionsRef.current.onCompleted;
+    if (isStateDone && onCompleted) {
+      onCompleted(stateRef.current.data, SharedCache.hooksPool);
+    }
+  }, [isStateDone]);
 
   return useMemo(
     () => [

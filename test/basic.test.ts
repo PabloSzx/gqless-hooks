@@ -49,6 +49,7 @@ describe('basic usage and cache', () => {
         },
         {
           manualCacheRefetch: true,
+          hookId: 'queryhello1',
         }
       );
 
@@ -72,13 +73,18 @@ describe('basic usage and cache', () => {
 
     const otherQuery = renderHook(() => {
       nRenderCache.render();
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
+      const hook = useQuery(
+        ({ hello }) => {
+          const result = hello({
+            name: 'zxc',
+          });
 
-        return result;
-      });
+          return result;
+        },
+        {
+          hookId: 'queryhello2',
+        }
+      );
 
       return hook;
     });

@@ -77,6 +77,7 @@ export const createUseQuery = <
       pollInterval,
       variables,
       manualCacheRefetch,
+      hookId,
     } = (optionsRef.current = defaultOptions(options));
 
     const isMountedRef = useRef(false);
@@ -158,8 +159,6 @@ export const createUseQuery = <
             isFetchingRef.current = false;
           }
 
-          optionsRef.current.onCompleted?.(dataValue);
-
           return dataValue;
         }
 
@@ -219,8 +218,6 @@ export const createUseQuery = <
           type: 'done',
           payload: dataValue,
         });
-
-        optionsRef.current.onCompleted?.(dataValue);
 
         return dataValue;
       },
@@ -316,6 +313,32 @@ export const createUseQuery = <
       }
       return undefined;
     }, [manualCacheRefetch]);
+
+    useEffect(() => {
+      if (hookId) {
+        return SharedCache.subscribeHookPool(hookId, {
+          callback: async (args) => {
+            const variables = args?.variables as TVariables | undefined;
+            const fetchPolicy = args?.fetchPolicy;
+            return (await queryCallbackRef.current({
+              variables,
+              fetchPolicy,
+            })) as any;
+          },
+          state: stateRef,
+        });
+      }
+      return undefined;
+    }, [hookId]);
+
+    const isStateDone = state.state === 'done';
+
+    useEffect(() => {
+      const onCompleted = optionsRef.current.onCompleted;
+      if (isStateDone && onCompleted) {
+        onCompleted(stateRef.current.data, SharedCache.hooksPool);
+      }
+    }, [isStateDone]);
 
     return useMemo(() => [state, helpers], [state, helpers]);
   };
