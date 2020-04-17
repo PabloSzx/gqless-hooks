@@ -48,7 +48,6 @@ describe('basic usage and cache', () => {
           return result;
         },
         {
-          manualCacheRefetch: true,
           hookId: 'queryhello1',
         }
       );
@@ -57,11 +56,11 @@ describe('basic usage and cache', () => {
     });
 
     expect(result.current[0].data).toBe(undefined);
-    expect(result.current[0].state).toBe('loading');
+    expect(result.current[0].fetchState).toBe('loading');
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(result.current[0].state).toBe('done');
+        expect(result.current[0].fetchState).toBe('done');
       }, 500);
     });
 
@@ -91,7 +90,7 @@ describe('basic usage and cache', () => {
 
     expect(nRenderCache.renders.n).toBe(2);
 
-    expect(otherQuery.result.current[0].state).toBe('done');
+    expect(otherQuery.result.current[0].fetchState).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
 
     expect(nRenderCache.renders.n).toBe(2);
@@ -113,12 +112,12 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
-    expect(otherQueryNetwork.result.current[0].state).toBe('loading');
+    expect(otherQueryNetwork.result.current[0].fetchState).toBe('loading');
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(otherQueryNetwork.result.current[0].state).toBe('done');
+        expect(otherQueryNetwork.result.current[0].fetchState).toBe('done');
       }, 500);
     });
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
@@ -135,7 +134,7 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
-    expect(otherQueryAfterNewClient.result.current[0].state).toBe('done');
+    expect(otherQueryAfterNewClient.result.current[0].fetchState).toBe('done');
     expect(otherQueryAfterNewClient.result.current[0].data).toBe('query zxc!');
   });
 
@@ -153,12 +152,12 @@ describe('basic usage and cache', () => {
     });
 
     expect(result.current[1].data).toBe(undefined);
-    expect(result.current[1].state).toBe('waiting');
+    expect(result.current[1].fetchState).toBe('waiting');
 
     await act(async () => {
       result.current[0]();
       await waitForExpect(() => {
-        expect(result.current[1].state).toBe('done');
+        expect(result.current[1].fetchState).toBe('done');
       }, 500);
     });
 
@@ -176,7 +175,7 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
-    expect(otherQuery.result.current[0].state).toBe('done');
+    expect(otherQuery.result.current[0].fetchState).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
   });
 });
@@ -205,7 +204,7 @@ describe('detect variables change', () => {
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(query.result.current.hook[0].state).toBe('done');
+        expect(query.result.current.hook[0].fetchState).toBe('done');
       }, 500);
     });
     expect(query.result.current.hook[0].data).toBe('query cvb!');
@@ -213,14 +212,10 @@ describe('detect variables change', () => {
     await act(async () => {
       query.result.current.nameState[1]('jkl');
       await waitForExpect(() => {
-        expect(query.result.current.hook[0].state).toBe('loading');
-      }, 500);
-      await waitForExpect(() => {
-        expect(query.result.current.hook[0].state).toBe('done');
+        expect(query.result.current.hook[0].data).toBe('query jkl!');
+        expect(query.result.current.hook[0].fetchState).toBe('done');
       }, 500);
     });
-
-    expect(query.result.current.hook[0].data).toBe('query jkl!');
   });
 });
 
@@ -232,9 +227,11 @@ describe('multiple hooks usage and cache', () => {
           return loremIpsum.map((v) => v);
         },
         {
+          autoCacheRefetch: true,
           headers: {
             query1: '',
           },
+          hookId: 'query1',
         }
       );
       const query2 = useQuery(
@@ -242,10 +239,12 @@ describe('multiple hooks usage and cache', () => {
           return loremIpsum.map((v) => v);
         },
         {
+          autoCacheRefetch: true,
           lazy: true,
           headers: {
             query2: '',
           },
+          hookId: 'query2',
           fetchPolicy: 'cache-and-network',
         }
       );
@@ -260,13 +259,13 @@ describe('multiple hooks usage and cache', () => {
       };
     });
 
-    expect(result.current.query1[0].state).toBe('loading');
-    expect(result.current.query2[0].state).toBe('waiting');
-    expect(result.current.mutation1[1].state).toBe('waiting');
+    expect(result.current.query1[0].fetchState).toBe('loading');
+    expect(result.current.query2[0].fetchState).toBe('waiting');
+    expect(result.current.mutation1[1].fetchState).toBe('waiting');
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(result.current.query1[0].state).toBe('done');
+        expect(result.current.query1[0].fetchState).toBe('done');
       }, 500);
     });
 
@@ -276,26 +275,24 @@ describe('multiple hooks usage and cache', () => {
       await result.current.query2[1].refetch();
     });
 
-    expect(result.current.query2[0].state).toBe('done');
+    expect(result.current.query2[0].fetchState).toBe('done');
 
     expect(result.current.query2[0].data).toHaveLength(2);
 
     await act(async () => {
-      await result.current.query1[1].cacheRefetch();
-
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(2);
       }, 500);
     });
 
-    expect(result.current.query1[0].state).toBe('done');
-    expect(result.current.query2[0].state).toBe('done');
+    expect(result.current.query1[0].fetchState).toBe('done');
+    expect(result.current.query2[0].fetchState).toBe('done');
 
     await act(async () => {
-      expect(result.current.mutation1[1].state).toBe('waiting');
+      expect(result.current.mutation1[1].fetchState).toBe('waiting');
 
       await result.current.mutation1[0]();
-      expect(result.current.mutation1[1].state).toBe('done');
+      expect(result.current.mutation1[1].fetchState).toBe('done');
       expect(result.current.mutation1[1].data).toHaveLength(0);
 
       await result.current.query1[1].refetch();
@@ -303,8 +300,6 @@ describe('multiple hooks usage and cache', () => {
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(1);
       }, 500);
-
-      await result.current.query2[1].cacheRefetch();
 
       await waitForExpect(() => {
         expect(result.current.query1[0].data).toHaveLength(1);

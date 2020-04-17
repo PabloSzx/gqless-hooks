@@ -167,13 +167,27 @@ export const createUseMutation = <
             fetchPolicy,
           })) as any;
         },
+        refetch: async (args) => {
+          const variables = args?.variables as TVariables | undefined;
+          return (await mutationCallbackRef.current({
+            variables,
+            fetchPolicy: 'cache-and-network',
+          })) as any;
+        },
+        cacheRefetch: async (args) => {
+          const variables = args?.variables as TVariables | undefined;
+          return (await mutationCallbackRef.current({
+            variables,
+            fetchPolicy: 'cache-only',
+          })) as any;
+        },
         state: stateRef,
       });
     }
     return undefined;
   }, [hookId]);
 
-  const isStateDone = state.state === 'done';
+  const isStateDone = state.fetchState === 'done';
 
   useEffect(() => {
     const onCompleted = optionsRef.current.onCompleted;

@@ -67,7 +67,7 @@ export const createUseQuery = <
     {
       refetch: QueryQuickCallback<TData, TVariables>;
       cacheRefetch: QueryQuickCallback<TData, TVariables>;
-      queryCallback: QueryCallback<TData, Query, TVariables>;
+      callback: QueryCallback<TData, Query, TVariables>;
       query: Query;
     }
   ] => {
@@ -76,7 +76,7 @@ export const createUseQuery = <
       lazy,
       pollInterval,
       variables,
-      manualCacheRefetch,
+      autoCacheRefetch,
       hookId,
     } = (optionsRef.current = defaultOptions(options));
 
@@ -274,7 +274,7 @@ export const createUseQuery = <
     const helpers = useMemo<{
       refetch: QueryQuickCallback<TData, TVariables>;
       cacheRefetch: QueryQuickCallback<TData, TVariables>;
-      queryCallback: QueryCallback<TData, Query, TVariables>;
+      callback: QueryCallback<TData, Query, TVariables>;
       query: Query;
     }>(() => {
       return {
@@ -290,29 +290,39 @@ export const createUseQuery = <
             fetchPolicy: 'cache-only',
           });
         },
-        queryCallback: queryCallbackRef.current,
+        callback: queryCallbackRef.current,
         query: queryClientRef.current.query,
       };
     }, []);
 
     useEffect(() => {
-      if (!manualCacheRefetch) {
-        return SharedCache.subscribeCache(async () => {
-          if (
-            !isFetchingRef.current && optionsRef.current.lazy
-              ? stateRef.current.called
-              : true
-          ) {
-            isFetchingRef.current = true;
+      if (autoCacheRefetch) {
+        return SharedCache.subscribeCache(
+          () =>
+            new Promise((resolve, reject) => {
+              setTimeout(() => {
+                if (
+                  !isFetchingRef.current && optionsRef.current.lazy
+                    ? stateRef.current.called
+                    : true
+                ) {
+                  isFetchingRef.current = true;
 
-            await queryCallbackRef.current({
-              fetchPolicy: 'cache-only',
-            });
-          }
-        });
+                  queryCallbackRef
+                    .current({
+                      fetchPolicy: 'cache-only',
+                    })
+                    .then(() => {
+                      resolve();
+                    })
+                    .catch(reject);
+                }
+              }, 0);
+            })
+        );
       }
       return undefined;
-    }, [manualCacheRefetch]);
+    }, [autoCacheRefetch]);
 
     useEffect(() => {
       if (hookId) {
@@ -325,13 +335,27 @@ export const createUseQuery = <
               fetchPolicy,
             })) as any;
           },
+          refetch: async (args) => {
+            const variables = args?.variables as TVariables | undefined;
+            return (await queryCallbackRef.current({
+              variables,
+              fetchPolicy: 'cache-and-network',
+            })) as any;
+          },
+          cacheRefetch: async (args) => {
+            const variables = args?.variables as TVariables | undefined;
+            return (await queryCallbackRef.current({
+              variables,
+              fetchPolicy: 'cache-only',
+            })) as any;
+          },
           state: stateRef,
         });
       }
       return undefined;
     }, [hookId]);
 
-    const isStateDone = state.state === 'done';
+    const isStateDone = state.fetchState === 'done';
 
     useEffect(() => {
       const onCompleted = optionsRef.current.onCompleted;

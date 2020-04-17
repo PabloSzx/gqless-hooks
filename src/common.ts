@@ -14,7 +14,7 @@ export type IVariables = Record<string, unknown>;
 
 interface CommonHookOptions<TData, TVariables extends IVariables> {
   fetchPolicy?: FetchPolicy;
-  onCompleted?: (data: Maybe<TData>, hooksPool: HooksPool) => void;
+  onCompleted?: (data: Maybe<TData>, hooks: HooksPool) => void;
   onError?: (errors: GraphQLError[]) => void;
   fetchTimeout?: number;
   headers?: Headers;
@@ -26,7 +26,7 @@ export interface QueryOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {
   lazy?: boolean;
   pollInterval?: number;
-  manualCacheRefetch?: boolean;
+  autoCacheRefetch?: boolean;
 }
 export interface MutationOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {}
@@ -34,7 +34,7 @@ export interface MutationOptions<TData, TVariables extends IVariables>
 type FetchState = 'waiting' | 'loading' | 'error' | 'done';
 
 export type IState<TData> = {
-  state: FetchState;
+  fetchState: FetchState;
   errors?: GraphQLError[];
   called: boolean;
   data: Maybe<TData>;
@@ -65,12 +65,12 @@ export type IDispatch<TData> =
   | IDispatchAction<'setData', Maybe<TData>>;
 
 const LazyInitialState: IState<any> = {
-  state: 'waiting',
+  fetchState: 'waiting',
   called: false,
   data: undefined,
 };
 const EarlyInitialState: IState<any> = {
-  state: 'loading',
+  fetchState: 'loading',
   called: true,
   data: undefined,
 };
@@ -100,14 +100,14 @@ export const StateReducer = <TData>(
   switch (action.type) {
     case 'done': {
       if (
-        reducerState.state === 'done' &&
+        reducerState.fetchState === 'done' &&
         stringifyIfNecessary(action.payload) ===
           stringifyIfNecessary(reducerState.data)
       ) {
         return reducerState;
       }
 
-      if (reducerState.state === 'error') {
+      if (reducerState.fetchState === 'error') {
         if (
           stringifyIfNecessary(action.payload) !==
           stringifyIfNecessary(reducerState.data)
@@ -119,23 +119,23 @@ export const StateReducer = <TData>(
 
       return {
         called: true,
-        state: 'done',
+        fetchState: 'done',
         data: action.payload,
       };
     }
     case 'loading': {
-      if (reducerState.state === 'loading') return reducerState;
+      if (reducerState.fetchState === 'loading') return reducerState;
 
       return {
         called: true,
-        state: 'loading',
+        fetchState: 'loading',
         data: reducerState.data,
       };
     }
     case 'error': {
       return {
         called: true,
-        state: 'error',
+        fetchState: 'error',
         data: reducerState.data,
         errors: action.payload,
       };
@@ -284,14 +284,23 @@ function concatCacheMap(
   }
 }
 
-export type HooksPool = Record<string, HookPoolData | undefined>;
+export type HooksPool = Record<string, Hook | undefined>;
 
-export type HookPoolData = {
+export type Hook = {
   callback: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
     variables?: Variables;
     fetchPolicy?: FetchPolicy;
   }) => Promise<Maybe<Data>>;
-  state: { current: IState<any> };
+  refetch: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
+    variables?: Variables;
+  }) => Promise<Maybe<Data>>;
+  cacheRefetch: <
+    Data = unknown,
+    Variables extends IVariables = IVariables
+  >(args?: {
+    variables?: Variables;
+  }) => Promise<Maybe<Data>>;
+  state: Readonly<{ current: Readonly<IState<any>> }>;
 };
 
 export const SharedCache = {
@@ -308,7 +317,7 @@ export const SharedCache = {
 
   hooksPool: {} as HooksPool,
 
-  subscribeHookPool: (hookId: string, data: HookPoolData) => {
+  subscribeHookPool: (hookId: string, data: Hook) => {
     if (process.env.NODE_ENV !== 'production') {
       if (hookId in SharedCache.hooksPool) {
         console.warn('Duplicated hook id, previous hook overwriten!');
