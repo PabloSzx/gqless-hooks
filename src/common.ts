@@ -1,8 +1,8 @@
 import 'isomorphic-unfetch';
 
-import { QueryFetcher, Value, DataTrait } from 'gqless';
+import { DataTrait, QueryFetcher, Value } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, useCallback, useRef, Reducer } from 'react';
+import { Dispatch, Reducer, useCallback, useRef } from 'react';
 
 export type CreateOptions<Schema> = {
   endpoint: string;
@@ -16,7 +16,6 @@ interface CommonHookOptions<TData, TVariables extends IVariables> {
   fetchPolicy?: FetchPolicy;
   onCompleted?: (data: Maybe<TData>) => void;
   onError?: (errors: GraphQLError[]) => void;
-  context?: Record<string, any>;
   fetchTimeout?: number;
   headers?: Headers;
   variables?: TVariables;
@@ -26,6 +25,7 @@ export interface QueryOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {
   lazy?: boolean;
   pollInterval?: number;
+  manualCacheRefetch?: boolean;
 }
 export interface MutationOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {}
@@ -83,26 +83,39 @@ export const StateReducerInitialState = <TData>(
 
 export type IStateReducer<TData> = Reducer<IState<TData>, IDispatch<TData>>;
 
+const stringifyIfNecessary = <T>(data: T) => {
+  if (data == null) {
+    return null;
+  } else if (typeof data === 'object') {
+    return JSON.stringify(data);
+  }
+  return data;
+};
+
 export const StateReducer = <TData>(
   reducerState: IState<TData>,
   action: IDispatch<TData>
 ): IState<TData> => {
   switch (action.type) {
     case 'done': {
+      if (
+        reducerState.state === 'done' &&
+        stringifyIfNecessary(action.payload) ===
+          stringifyIfNecessary(reducerState.data)
+      ) {
+        return reducerState;
+      }
+
       if (reducerState.state === 'error') {
         if (
-          JSON.stringify(action.payload) !== JSON.stringify(reducerState.data)
+          stringifyIfNecessary(action.payload) !==
+          stringifyIfNecessary(reducerState.data)
         ) {
           return { ...reducerState, data: action.payload };
         }
         return reducerState;
       }
-      if (
-        reducerState.state === 'done' &&
-        JSON.stringify(action.payload) === JSON.stringify(reducerState.data)
-      ) {
-        return reducerState;
-      }
+
       return {
         called: true,
         state: 'done',
@@ -128,7 +141,8 @@ export const StateReducer = <TData>(
     }
     case 'setData': {
       if (
-        JSON.stringify(action.payload) !== JSON.stringify(reducerState.data)
+        stringifyIfNecessary(action.payload) !==
+        stringifyIfNecessary(reducerState.data)
       ) {
         return {
           ...reducerState,
@@ -142,8 +156,6 @@ export const StateReducer = <TData>(
   }
 };
 
-export const emptyCallback = () => {};
-
 export const logDevErrors =
   process.env.NODE_ENV !== 'production'
     ? (err: any) => {
@@ -151,10 +163,11 @@ export const logDevErrors =
       }
     : undefined;
 
-export const useFetchCallback = <TData>(args: {
+export const defaultEmptyObject = {};
+
+export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   dispatch: Dispatch<IDispatch<TData>>;
   endpoint: string;
-  fetchPolicy: FetchPolicy | undefined;
   effects: {
     onPreEffect?: () => void;
     onSuccessEffect?: () => void;
@@ -162,23 +175,17 @@ export const useFetchCallback = <TData>(args: {
   };
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
-  headers: Headers | undefined;
+  optionsRef: { current: CommonHookOptions<TData, TVariables> };
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
 
   return useCallback<QueryFetcher>(async (query, variables) => {
     const {
-      dispatch,
-      endpoint,
       fetchPolicy,
-      effects,
-      type = 'query',
-      creationHeaders,
-      headers,
-    } = argsRef.current;
-
-    effects.onPreEffect?.();
+      headers = defaultEmptyObject,
+      onError,
+    } = argsRef.current.optionsRef.current;
 
     switch (fetchPolicy) {
       case 'cache-only': {
@@ -187,6 +194,16 @@ export const useFetchCallback = <TData>(args: {
         };
       }
     }
+
+    const {
+      dispatch,
+      endpoint,
+      effects,
+      type = 'query',
+      creationHeaders = defaultEmptyObject,
+    } = argsRef.current;
+
+    effects.onPreEffect?.();
 
     dispatch({ type: 'loading' });
 
@@ -216,15 +233,21 @@ export const useFetchCallback = <TData>(args: {
     if (!response.ok) {
       let errorPayload: GraphQLError[] | undefined;
 
-      errorPayload = json?.errors ?? (Array.isArray(json) ? json : undefined);
+      if (Array.isArray(json?.errors)) {
+        errorPayload = json.errors;
+      } else if (Array.isArray(json)) {
+        errorPayload = json;
+      }
 
       const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
 
-      effects.onErrorEffect?.(errorPayload ?? errorText);
+      effects.onErrorEffect?.(errorPayload || errorText);
+
+      onError?.(errorPayload || []);
 
       dispatch({
         type: 'error',
-        payload: errorPayload ?? [],
+        payload: errorPayload || [],
       });
 
       throw new Error(errorText);
@@ -232,9 +255,14 @@ export const useFetchCallback = <TData>(args: {
 
     if (json?.errors) {
       effects.onErrorEffect?.(json.errors);
+
+      const errorGraphqlError = Array.isArray(json.errors) ? json.errors : [];
+
+      onError?.(errorGraphqlError);
+
       dispatch({
         type: 'error',
-        payload: json.errors,
+        payload: errorGraphqlError,
       });
     } else {
       effects.onSuccessEffect?.();
@@ -258,9 +286,26 @@ function concatCacheMap(
 export const SharedCache = {
   value: undefined as Value<DataTrait> | undefined,
 
+  cacheSubscribers: new Set<() => Promise<void>>(),
+
+  subscribeCache: (fn: () => Promise<void>) => {
+    SharedCache.cacheSubscribers.add(fn);
+    return () => {
+      SharedCache.cacheSubscribers.delete(fn);
+    };
+  },
+
   initialCache: (cacheRootValue: Value<DataTrait>) => {
     if (SharedCache.value === undefined) {
       SharedCache.value = cacheRootValue;
+
+      cacheRootValue.onSet(() => {
+        if (SharedCache.cacheSubscribers.size) {
+          for (const subscriber of SharedCache.cacheSubscribers) {
+            subscriber().catch(console.error);
+          }
+        }
+      });
     }
 
     return SharedCache.value;
@@ -275,7 +320,7 @@ export const SharedCache = {
         cacheRootValue.data
       );
     } else {
-      SharedCache.value = cacheRootValue;
+      SharedCache.value = SharedCache.initialCache(cacheRootValue);
     }
     return SharedCache.value;
   },

@@ -1,19 +1,19 @@
 import { Client, ObjectNode } from 'gqless';
-
 import { useCallback, useMemo, useReducer, useRef } from 'react';
 
 import {
-  StateReducer,
-  IState,
-  Maybe,
-  useFetchCallback,
   CreateOptions,
-  MutationOptions,
-  logDevErrors,
-  SharedCache,
-  StateReducerInitialState,
+  defaultEmptyObject,
+  IState,
   IStateReducer,
   IVariables,
+  logDevErrors,
+  Maybe,
+  MutationOptions,
+  SharedCache,
+  StateReducer,
+  StateReducerInitialState,
+  useFetchCallback,
 } from './common';
 
 type MutationCallback<
@@ -23,7 +23,7 @@ type MutationCallback<
 > = (mutationArgs?: {
   mutation?: MutationFn<TData, Mutation, TVariables>;
   variables?: TVariables;
-}) => Promise<TData>;
+}) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
   options: MutationOptions<TData, TVariables>
@@ -46,15 +46,13 @@ export const createUseMutation = <
   headers: creationHeaders,
 }: CreateOptions<Schema>) => <TData, TVariables extends IVariables>(
   mutationFn: MutationFn<TData, Mutation, TVariables>,
-  options: MutationOptions<TData, TVariables> = {}
+  options: MutationOptions<TData, TVariables> = defaultEmptyObject
 ): [
   MutationCallback<TData, Mutation, TVariables>,
-  IState<TData> & { data: Maybe<TData> }
+  IState<TData> & { query: Mutation }
 ] => {
   const optionsRef = useRef(options);
-  const { fetchPolicy, headers } = (optionsRef.current = defaultOptions(
-    options
-  ));
+  const { fetchPolicy } = (optionsRef.current = defaultOptions(options));
 
   const mutationFnRef = useRef(mutationFn);
   mutationFnRef.current = mutationFn;
@@ -64,10 +62,9 @@ export const createUseMutation = <
     StateReducerInitialState<TData>(true)
   );
 
-  const fetchMutation = useFetchCallback({
+  const fetchMutation = useFetchCallback<TData, TVariables>({
     dispatch,
     endpoint,
-    fetchPolicy,
     effects: {
       onPreEffect: () => {
         switch (fetchPolicy) {
@@ -84,50 +81,75 @@ export const createUseMutation = <
     },
     type: 'mutation',
     creationHeaders,
-    headers,
+    optionsRef,
   });
+
+  const initialMutationClient = useMemo(() => {
+    const client = new Client<Mutation>(schema.Mutation, fetchMutation);
+
+    client.cache.rootValue = SharedCache.initialCache(client.cache.rootValue);
+
+    return client;
+  }, [fetchMutation]);
+
+  const mutationClientRef = useRef<Client<Mutation>>(initialMutationClient);
 
   const mutationCallback = useCallback<
     MutationCallback<TData, Mutation, TVariables>
   >(
-    async (mutationArgs) => {
-      let { mutation = mutationFnRef.current, variables: variablesArgs } =
-        mutationArgs || {};
+    async (mutationArgs = defaultEmptyObject) => {
+      const {
+        mutation = mutationFnRef.current,
+        variables: variablesArgs,
+      } = mutationArgs;
 
       const variables: TVariables =
-        variablesArgs || optionsRef.current.variables || ({} as TVariables);
+        variablesArgs ||
+        optionsRef.current.variables ||
+        (defaultEmptyObject as TVariables);
 
-      const mutationClient = new Client<Mutation>(
-        schema.Mutation,
-        fetchMutation
-      );
+      const client = new Client<Mutation>(schema.Mutation, fetchMutation);
 
-      mutation(mutationClient.query, variables);
+      mutation(client.query, variables);
 
-      await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve();
-        }, optionsRef.current.fetchTimeout);
+      const isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
 
-        mutationClient.scheduler.commit.onFetched(() => {
-          clearTimeout(timeout);
-          resolve();
+      if (isFetchingGqless) {
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve();
+          }, optionsRef.current.fetchTimeout);
+
+          client.scheduler.commit.onFetched.then(() => {
+            clearTimeout(timeout);
+            resolve();
+          });
         });
-      });
+      }
 
-      const dataValue = mutation(mutationClient.query, variables);
+      const dataValue = mutation(client.query, variables);
+
+      client.cache.rootValue = SharedCache.mergeCache(client.cache.rootValue);
+
+      mutationClientRef.current = client;
 
       dispatch({
         type: 'done',
         payload: dataValue,
       });
 
-      SharedCache.mergeCache(mutationClient.cache.rootValue);
+      optionsRef.current.onCompleted?.(dataValue);
 
       return dataValue;
     },
     [fetchMutation]
   );
 
-  return useMemo(() => [mutationCallback, state], [state, mutationCallback]);
+  return useMemo(
+    () => [
+      mutationCallback,
+      { ...state, query: mutationClientRef.current.query },
+    ],
+    [state, mutationCallback]
+  );
 };

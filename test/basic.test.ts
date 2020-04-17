@@ -1,12 +1,14 @@
-import { isListening, isClosed, close } from './server';
+import { useState } from 'react';
+import waitForExpect from 'wait-for-expect';
+
 import {
+  act,
   cleanup as cleanupHooks,
   renderHook,
-  act,
 } from '@testing-library/react-hooks';
-import { useQuery, useMutation } from './generated/graphql/client';
-import waitForExpect from 'wait-for-expect';
-import { useState } from 'react';
+
+import { useMutation, useQuery } from './generated/graphql/client';
+import { close, isClosed, isListening } from './server';
 
 afterEach(async () => {
   await cleanupHooks();
@@ -36,28 +38,28 @@ const renderCount = () => {
 
 describe('basic usage and cache', () => {
   test('query works', async () => {
-    const nRender = renderCount();
     const { result } = renderHook(() => {
-      nRender.render();
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
+      const hook = useQuery(
+        ({ hello }) => {
+          const result = hello({
+            name: 'zxc',
+          });
 
-        return result;
-      });
+          return result;
+        },
+        {
+          manualCacheRefetch: true,
+        }
+      );
 
       return hook;
     });
 
     expect(result.current[0].data).toBe(undefined);
     expect(result.current[0].state).toBe('loading');
-    expect(nRender.renders.n).toBe(1);
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(nRender.renders.n).toBe(2);
-
         expect(result.current[0].state).toBe('done');
       }, 500);
     });
@@ -241,7 +243,7 @@ describe('multiple hooks usage and cache', () => {
           fetchPolicy: 'cache-and-network',
         }
       );
-      const mutation1 = useMutation(({ resetLoremIpsum }, { a }) => {
+      const mutation1 = useMutation(({ resetLoremIpsum }) => {
         return resetLoremIpsum.map((v) => v);
       }, {});
 

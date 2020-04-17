@@ -5,7 +5,7 @@ import bodyParser from 'body-parser';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
 const app = express();
-import wait from 'waait';
+
 app.use(bodyParser.json());
 
 const loremIpsumArray: string[] = [];

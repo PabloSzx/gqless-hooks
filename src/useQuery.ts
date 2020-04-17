@@ -1,19 +1,20 @@
 import { Client, ObjectNode } from 'gqless';
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+
 import {
-  IState,
-  Maybe,
-  StateReducer,
-  useFetchCallback,
   CreateOptions,
-  QueryOptions,
+  defaultEmptyObject,
   FetchPolicy,
-  emptyCallback,
-  logDevErrors,
-  SharedCache,
-  StateReducerInitialState,
+  IState,
   IStateReducer,
   IVariables,
+  logDevErrors,
+  Maybe,
+  QueryOptions,
+  SharedCache,
+  StateReducer,
+  StateReducerInitialState,
+  useFetchCallback,
 } from './common';
 
 export type QueryFn<TData, Query, TVariables extends IVariables> = (
@@ -60,22 +61,22 @@ export const createUseQuery = <
 }: CreateOptions<Schema>) => {
   return <TData, TVariables extends IVariables>(
     queryFn: QueryFn<TData, Query, TVariables>,
-    options: QueryOptions<TData, TVariables> = {}
+    options: QueryOptions<TData, TVariables> = defaultEmptyObject
   ): [
     IState<TData> & { data: Maybe<TData> },
     {
       refetch: QueryQuickCallback<TData, TVariables>;
       cacheRefetch: QueryQuickCallback<TData, TVariables>;
-      query: QueryCallback<TData, Query, TVariables>;
+      queryCallback: QueryCallback<TData, Query, TVariables>;
+      query: Query;
     }
   ] => {
     const optionsRef = useRef(options);
     const {
       lazy,
-      fetchPolicy,
       pollInterval,
-      headers,
       variables,
+      manualCacheRefetch,
     } = (optionsRef.current = defaultOptions(options));
 
     const isMountedRef = useRef(false);
@@ -91,16 +92,15 @@ export const createUseQuery = <
     const stateRef = useRef(state);
     stateRef.current = state;
 
-    const fetchQuery = useFetchCallback<TData>({
+    const fetchQuery = useFetchCallback<TData, TVariables>({
       dispatch,
       endpoint,
-      fetchPolicy,
       effects: {
         onErrorEffect: logDevErrors,
       },
       type: 'query',
       creationHeaders,
-      headers,
+      optionsRef,
     });
 
     const initialQueryClient = useMemo(() => {
@@ -114,15 +114,19 @@ export const createUseQuery = <
     const queryClientRef = useRef<Client<Query>>(initialQueryClient);
 
     const queryCallback = useCallback<QueryCallback<TData, Query, TVariables>>(
-      async (queryArgs) => {
+      async (queryArgs = defaultEmptyObject) => {
         let {
           query = queryFnRef.current,
           fetchPolicy = optionsRef.current.fetchPolicy,
           variables: variablesArgs,
-        } = queryArgs || {};
+        } = queryArgs;
+
+        optionsRef.current.fetchPolicy = fetchPolicy;
 
         const variables =
-          variablesArgs || optionsRef.current.variables || ({} as TVariables);
+          variablesArgs ||
+          optionsRef.current.variables ||
+          (defaultEmptyObject as TVariables);
 
         let client: Client<Query> = queryClientRef.current;
 
@@ -154,6 +158,8 @@ export const createUseQuery = <
             isFetchingRef.current = false;
           }
 
+          optionsRef.current.onCompleted?.(dataValue);
+
           return dataValue;
         }
 
@@ -165,7 +171,7 @@ export const createUseQuery = <
               resolve();
             }, optionsRef.current.fetchTimeout);
 
-            client.scheduler.commit.onFetched(() => {
+            client.scheduler.commit.onFetched.then(() => {
               isFetchingRef.current = false;
               clearTimeout(timeout);
 
@@ -214,6 +220,8 @@ export const createUseQuery = <
           payload: dataValue,
         });
 
+        optionsRef.current.onCompleted?.(dataValue);
+
         return dataValue;
       },
       [fetchQuery]
@@ -246,7 +254,7 @@ export const createUseQuery = <
         };
       }
 
-      return emptyCallback;
+      return undefined;
     }, [pollInterval]);
 
     const isFirstMountRef = useRef(true);
@@ -255,25 +263,22 @@ export const createUseQuery = <
 
     useEffect(() => {
       if (isFirstMountRef.current) {
+        isMountedRef.current = true;
         isFirstMountRef.current = false;
       } else if (
-        optionsRef.current.variables && optionsRef.current.lazy
-          ? stateRef.current.called
-          : true
+        optionsRef.current.variables &&
+        (optionsRef.current.lazy ? stateRef.current.called : true)
       ) {
         isFetchingRef.current = true;
         queryCallbackRef.current().catch(console.error);
       }
     }, [serializedVariables]);
 
-    useEffect(() => {
-      isMountedRef.current = true;
-    }, []);
-
-    const callbacks = useMemo<{
+    const helpers = useMemo<{
       refetch: QueryQuickCallback<TData, TVariables>;
       cacheRefetch: QueryQuickCallback<TData, TVariables>;
-      query: QueryCallback<TData, Query, TVariables>;
+      queryCallback: QueryCallback<TData, Query, TVariables>;
+      query: Query;
     }>(() => {
       return {
         refetch: (args) => {
@@ -288,10 +293,30 @@ export const createUseQuery = <
             fetchPolicy: 'cache-only',
           });
         },
-        query: queryCallbackRef.current,
+        queryCallback: queryCallbackRef.current,
+        query: queryClientRef.current.query,
       };
     }, []);
 
-    return useMemo(() => [state, callbacks], [state, callbacks]);
+    useEffect(() => {
+      if (!manualCacheRefetch) {
+        return SharedCache.subscribeCache(async () => {
+          if (
+            !isFetchingRef.current && optionsRef.current.lazy
+              ? stateRef.current.called
+              : true
+          ) {
+            isFetchingRef.current = true;
+
+            await queryCallbackRef.current({
+              fetchPolicy: 'cache-only',
+            });
+          }
+        });
+      }
+      return undefined;
+    }, [manualCacheRefetch]);
+
+    return useMemo(() => [state, helpers], [state, helpers]);
   };
 };
