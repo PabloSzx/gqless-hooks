@@ -15,6 +15,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -67,7 +68,7 @@ const Component = () => {
 
   // helloWorldMutation works as initiator of the mutation or refetch.
 
-  const [helloWorldData, helloWorldQuery] = useQuery(
+  const [helloWorldData, { callback, refetch, cacheRefetch }] = useQuery(
     ({ helloWorldQuery: { id, label } }) => ({ id, label }),
     {
       // if lazy == true, wait until function from returned array is called
@@ -77,7 +78,7 @@ const Component = () => {
 
   // helloWorldData === { data = { id,label } | undefined | null, state = "loading" | "error" | "waiting" | "done", errors = GraphqlError[] | undefined }
 
-  // helloWorldQuery works as initiator of the query or refetch.
+  // callback and refetch work as initiators of the query or refetch.
 };
 ```
 
@@ -90,4 +91,3 @@ If you are only using these hooks and not the default **query** from gqless, you
 ## Future
 
 - Add support for Pagination, with a **fetchMore**-alike (since gqless doesn't have planned support for it for the foreseeable future)
-- Merge the cache of the default client generated for the **query** with the cache of these hooks.

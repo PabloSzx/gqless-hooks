@@ -170,7 +170,7 @@ describe('basic usage and cache', () => {
         });
 
         return result;
-      });
+      }, {});
 
       return hook;
     });

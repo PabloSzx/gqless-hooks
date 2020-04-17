@@ -4,28 +4,115 @@ import { DataTrait, QueryFetcher, Value } from 'gqless';
 import { GraphQLError } from 'graphql';
 import { Dispatch, Reducer, useCallback, useRef } from 'react';
 
+/**
+ * Create Options needed for hook instances creation
+ */
 export type CreateOptions<Schema> = {
+  /**
+   * **endpoint**
+   *
+   * Endpoint of the GraphQL server
+   */
   endpoint: string;
+  /**
+   * **schema**
+   *
+   * gqless GraphQL Schema
+   */
   schema: Schema;
+  /**
+   * **headers**
+   *
+   * Headers added to all hooks fetch calls
+   */
   headers?: Record<string, string>;
 };
 
+/**
+ * GraphQL variables
+ */
 export type IVariables = Record<string, unknown>;
 
 interface CommonHookOptions<TData, TVariables extends IVariables> {
+  /**
+   * **fetchPolicy**
+   *
+   * Fetch policy used for the hook.
+   *
+   * Based in **Apollo fetchPolicy** behaviour
+   * https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+   */
   fetchPolicy?: FetchPolicy;
-  onCompleted?: (data: Maybe<TData>, hooks: HooksPool) => void;
+  /**
+   * **onCompleted**
+   *
+   * Event called on every successful hook call.
+   *
+   * It first receives the resulting **data** of the hook call
+   * and the hooks pool, identified by **hookId** option.
+   *
+   * (data: Maybe<TData>, hooks: HooksPool) => void
+   */
+  onCompleted?: (data: Maybe<TData>, hooks: Readonly<HooksPool>) => void;
+  /**
+   * **onError**
+   *
+   * Event called on GraphQL error on hook call.
+   */
   onError?: (errors: GraphQLError[]) => void;
+  /**
+   * **fetchTimeout**
+   *
+   * Fetch timeout time, by default is **10000** ms
+   */
   fetchTimeout?: number;
+  /**
+   * **headers**
+   *
+   * Headers added to the **fetch** call
+   */
   headers?: Headers;
+  /**
+   * **variables**
+   *
+   * Variables used in the hook call.
+   *
+   * Hook automatically called on any variable change
+   * in **useQuery**.
+   */
   variables?: TVariables;
+  /**
+   * **hookId**
+   *
+   * ***Unique*** hook identifier used to add the hook to the ***hooks pool***, received in
+   * **onCompleted** event.
+   */
   hookId?: string;
 }
 
 export interface QueryOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {
+  /**
+   * **lazy**
+   *
+   * Specify **lazy** behaviour of the query.
+   *
+   * Wait until explicit query call.
+   */
   lazy?: boolean;
+  /**
+   * **pollInterval**
+   *
+   * Activate and specify milliseconds polling interval of the hook call;
+   */
   pollInterval?: number;
+  /**
+   * **manualCacheRefetch**
+   *
+   * If this query handles big amount of data, it's good practice
+   * in terms of performance to enable this flag and only use the
+   * **cacheRefetch** callback when needed.
+   */
   manualCacheRefetch?: boolean;
 }
 export interface MutationOptions<TData, TVariables extends IVariables>
@@ -33,10 +120,37 @@ export interface MutationOptions<TData, TVariables extends IVariables>
 
 type FetchState = 'waiting' | 'loading' | 'error' | 'done';
 
+/**
+ * Hook state
+ */
 export type IState<TData> = {
+  /**
+   * **fetchState**
+   *
+   * Fetch state of the hook.
+   *
+   * 'waiting' | 'loading' | 'error' | 'done'
+   */
   fetchState: FetchState;
+  /**
+   * **errors**
+   *
+   * GraphQL errors found on the hook call, if any.
+   */
   errors?: GraphQLError[];
+  /**
+   * **called**
+   *
+   * Boolean helper to know if the query has already
+   * been called, specially useful for **lazy queries**
+   * and **mutations**.
+   */
   called: boolean;
+  /**
+   * **data**
+   *
+   * Data expected from the hook
+   */
   data: Maybe<TData>;
 };
 
@@ -49,6 +163,11 @@ export type IDispatchAction<
   payload?: ActionPayload;
   stateRef: { current: IState<TData> };
 };
+
+/**
+ * Fetch policy based in **Apollo fetchPolicy** behaviour
+ * https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+ */
 export type FetchPolicy =
   | 'cache-first'
   | 'cache-and-network'
@@ -71,11 +190,13 @@ const LazyInitialState: IState<any> = {
   called: false,
   data: undefined,
 };
+
 const EarlyInitialState: IState<any> = {
   fetchState: 'loading',
   called: true,
   data: undefined,
 };
+
 export const StateReducerInitialState = <TData>(
   lazy: boolean
 ): IState<TData> => {
@@ -285,22 +406,39 @@ function concatCacheMap(
   }
 }
 
+/**
+ * Hooks pool of **gqless-hooks**.
+ *
+ * Hooks are added based on **hookId**
+ */
 export type HooksPool = Record<string, Hook | undefined>;
 
 export type Hook = {
+  /**
+   * Generic hook callback of the hook
+   */
   callback: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
     variables?: Variables;
     fetchPolicy?: FetchPolicy;
   }) => Promise<Maybe<Data>>;
+  /**
+   * Hook callback using **cache-and-network** fetchPolicy.
+   */
   refetch: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
     variables?: Variables;
   }) => Promise<Maybe<Data>>;
+  /**
+   * Hook callback using **cache-only** fetchPolicy.
+   */
   cacheRefetch: <
     Data = unknown,
     Variables extends IVariables = IVariables
   >(args?: {
     variables?: Variables;
   }) => Promise<Maybe<Data>>;
+  /**
+   * Current hook state.
+   */
   state: Readonly<{ current: Readonly<IState<any>> }>;
 };
 

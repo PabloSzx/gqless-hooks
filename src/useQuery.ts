@@ -64,11 +64,23 @@ export const createUseQuery = <
     queryFn: QueryFn<TData, Query, TVariables>,
     options: QueryOptions<TData, TVariables> = defaultEmptyObject
   ): [
-    IState<TData> & { data: Maybe<TData> },
+    IState<TData>,
     {
+      /**
+       * Query callback using **cache-and-network** fetchPolicy.
+       */
       refetch: QueryQuickCallback<TData, TVariables>;
+      /**
+       * Query callback using **cache-only** fetchPolicy.
+       */
       cacheRefetch: QueryQuickCallback<TData, TVariables>;
+      /**
+       * Generic query callback.
+       */
       callback: QueryCallback<TData, Query, TVariables>;
+      /**
+       * *Vanilla* **gqless** Client query.
+       */
       query: Query;
     }
   ] => {

@@ -17,6 +17,9 @@ import {
   useFetchCallback,
 } from './common';
 
+/**
+ * Mutation callback
+ */
 type MutationCallback<
   TData,
   Mutation,
@@ -51,7 +54,12 @@ export const createUseMutation = <
   options: MutationOptions<TData, TVariables> = defaultEmptyObject
 ): [
   MutationCallback<TData, Mutation, TVariables>,
-  IState<TData> & { query: Mutation }
+  IState<TData> & {
+    /**
+     * *Vanilla* **gqless** Client query.
+     */
+    query: Mutation;
+  }
 ] => {
   const optionsRef = useRef(options);
   const { fetchPolicy, hookId } = (optionsRef.current = defaultOptions(
