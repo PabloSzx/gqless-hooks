@@ -15,6 +15,7 @@ import {
   StateReducer,
   StateReducerInitialState,
   useFetchCallback,
+  stringifyIfNeeded,
 } from './common';
 
 export type QueryFn<TData, Query, TVariables extends IVariables> = (
@@ -76,7 +77,7 @@ export const createUseQuery = <
       lazy,
       pollInterval,
       variables,
-      autoCacheRefetch,
+      manualCacheRefetch,
       hookId,
     } = (optionsRef.current = defaultOptions(options));
 
@@ -102,6 +103,7 @@ export const createUseQuery = <
       type: 'query',
       creationHeaders,
       optionsRef,
+      stateRef,
     });
 
     const initialQueryClient = useMemo(() => {
@@ -151,13 +153,22 @@ export const createUseQuery = <
         }
 
         if (fetchPolicy === 'cache-only') {
-          dispatch({
-            type: 'done',
-            payload: dataValue,
-          });
           if (!isFetchingGqless) {
             isFetchingRef.current = false;
           }
+
+          if (
+            stateRef.current.fetchState === 'done' &&
+            stringifyIfNeeded(stateRef.current.data) ===
+              stringifyIfNeeded(dataValue)
+          ) {
+            return dataValue;
+          }
+          dispatch({
+            type: 'done',
+            payload: dataValue,
+            stateRef,
+          });
 
           return dataValue;
         }
@@ -180,10 +191,16 @@ export const createUseQuery = <
 
         if (noCache || !isFetchingGqless) {
           if (fetchPolicy === 'cache-and-network') {
-            dispatch({
-              type: 'setData',
-              payload: dataValue,
-            });
+            if (
+              stringifyIfNeeded(stateRef.current.data) !==
+              stringifyIfNeeded(dataValue)
+            ) {
+              dispatch({
+                type: 'setData',
+                payload: dataValue,
+                stateRef,
+              });
+            }
           }
 
           if (
@@ -217,6 +234,7 @@ export const createUseQuery = <
         dispatch({
           type: 'done',
           payload: dataValue,
+          stateRef,
         });
 
         return dataValue;
@@ -251,7 +269,7 @@ export const createUseQuery = <
         };
       }
 
-      return undefined;
+      return;
     }, [pollInterval]);
 
     const isFirstMountRef = useRef(true);
@@ -296,7 +314,7 @@ export const createUseQuery = <
     }, []);
 
     useEffect(() => {
-      if (autoCacheRefetch) {
+      if (!manualCacheRefetch) {
         return SharedCache.subscribeCache(
           () =>
             new Promise((resolve, reject) => {
@@ -321,8 +339,8 @@ export const createUseQuery = <
             })
         );
       }
-      return undefined;
-    }, [autoCacheRefetch]);
+      return;
+    }, [manualCacheRefetch]);
 
     useEffect(() => {
       if (hookId) {
@@ -352,15 +370,17 @@ export const createUseQuery = <
           state: stateRef,
         });
       }
-      return undefined;
+      return;
     }, [hookId]);
 
     const isStateDone = state.fetchState === 'done';
 
     useEffect(() => {
-      const onCompleted = optionsRef.current.onCompleted;
-      if (isStateDone && onCompleted) {
-        onCompleted(stateRef.current.data, SharedCache.hooksPool);
+      if (isStateDone && optionsRef.current.onCompleted) {
+        optionsRef.current.onCompleted(
+          stateRef.current.data,
+          SharedCache.hooksPool
+        );
       }
     }, [isStateDone]);
 

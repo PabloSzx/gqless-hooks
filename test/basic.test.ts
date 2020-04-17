@@ -37,8 +37,13 @@ const renderCount = () => {
 };
 
 describe('basic usage and cache', () => {
-  test('query works', async () => {
+  test('query works and minimizes renders calls', async () => {
+    const nRenderFirst = renderCount();
+
+    expect(nRenderFirst.renders.n).toBe(0);
+
     const { result } = renderHook(() => {
+      nRenderFirst.render();
       const hook = useQuery(
         ({ hello }) => {
           const result = hello({
@@ -57,18 +62,24 @@ describe('basic usage and cache', () => {
 
     expect(result.current[0].data).toBe(undefined);
     expect(result.current[0].fetchState).toBe('loading');
+    expect(nRenderFirst.renders.n).toBe(1);
 
     await act(async () => {
       await waitForExpect(() => {
+        expect(nRenderFirst.renders.n).toBe(2);
+
         expect(result.current[0].fetchState).toBe('done');
       }, 500);
     });
+
+    expect(nRenderFirst.renders.n).toBe(2);
 
     expect(result.current[0].data).toBe('query zxc!');
 
     const nRenderCache = renderCount();
 
     expect(nRenderCache.renders.n).toBe(0);
+    expect(nRenderFirst.renders.n).toBe(2);
 
     const otherQuery = renderHook(() => {
       nRenderCache.render();
@@ -94,8 +105,14 @@ describe('basic usage and cache', () => {
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
 
     expect(nRenderCache.renders.n).toBe(2);
+    expect(nRenderFirst.renders.n).toBe(2);
+
+    const nRenderCacheAndNetwork = renderCount();
+
+    expect(nRenderCacheAndNetwork.renders.n).toBe(0);
 
     const otherQueryNetwork = renderHook(() => {
+      nRenderCacheAndNetwork.render();
       const hook = useQuery(
         ({ hello }) => {
           const result = hello({
@@ -112,6 +129,10 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
+    expect(nRenderCache.renders.n).toBe(2);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(1);
+    expect(nRenderFirst.renders.n).toBe(2);
+
     expect(otherQueryNetwork.result.current[0].fetchState).toBe('loading');
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
 
@@ -120,7 +141,9 @@ describe('basic usage and cache', () => {
         expect(otherQueryNetwork.result.current[0].fetchState).toBe('done');
       }, 500);
     });
+    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
+    expect(nRenderFirst.renders.n).toBe(2);
 
     const otherQueryAfterNewClient = renderHook(() => {
       const hook = useQuery(({ hello }) => {
@@ -133,6 +156,7 @@ describe('basic usage and cache', () => {
 
       return hook;
     });
+    expect(nRenderFirst.renders.n).toBe(2);
 
     expect(otherQueryAfterNewClient.result.current[0].fetchState).toBe('done');
     expect(otherQueryAfterNewClient.result.current[0].data).toBe('query zxc!');
@@ -227,7 +251,6 @@ describe('multiple hooks usage and cache', () => {
           return loremIpsum.map((v) => v);
         },
         {
-          autoCacheRefetch: true,
           headers: {
             query1: '',
           },
@@ -239,7 +262,6 @@ describe('multiple hooks usage and cache', () => {
           return loremIpsum.map((v) => v);
         },
         {
-          autoCacheRefetch: true,
           lazy: true,
           headers: {
             query2: '',

@@ -26,7 +26,7 @@ export interface QueryOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {
   lazy?: boolean;
   pollInterval?: number;
-  autoCacheRefetch?: boolean;
+  manualCacheRefetch?: boolean;
 }
 export interface MutationOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {}
@@ -41,11 +41,13 @@ export type IState<TData> = {
 };
 
 export type IDispatchAction<
+  TData,
   ActionType extends string,
   ActionPayload = undefined
 > = {
   type: ActionType;
   payload?: ActionPayload;
+  stateRef: { current: IState<TData> };
 };
 export type FetchPolicy =
   | 'cache-first'
@@ -59,10 +61,10 @@ export type Maybe<T> = T | null | undefined;
 type Headers = Record<string, string | number | boolean>;
 
 export type IDispatch<TData> =
-  | IDispatchAction<'loading'>
-  | IDispatchAction<'done', Maybe<TData>>
-  | IDispatchAction<'error', GraphQLError[]>
-  | IDispatchAction<'setData', Maybe<TData>>;
+  | IDispatchAction<TData, 'loading'>
+  | IDispatchAction<TData, 'done', Maybe<TData>>
+  | IDispatchAction<TData, 'error', GraphQLError[]>
+  | IDispatchAction<TData, 'setData', Maybe<TData>>;
 
 const LazyInitialState: IState<any> = {
   fetchState: 'waiting',
@@ -84,7 +86,7 @@ export const StateReducerInitialState = <TData>(
 
 export type IStateReducer<TData> = Reducer<IState<TData>, IDispatch<TData>>;
 
-const stringifyIfNecessary = <T>(data: T) => {
+export const stringifyIfNeeded = <T>(data: T) => {
   if (data == null) {
     return null;
   } else if (typeof data === 'object') {
@@ -99,23 +101,18 @@ export const StateReducer = <TData>(
 ): IState<TData> => {
   switch (action.type) {
     case 'done': {
-      if (
-        reducerState.fetchState === 'done' &&
-        stringifyIfNecessary(action.payload) ===
-          stringifyIfNecessary(reducerState.data)
-      ) {
-        return reducerState;
-      }
-
       if (reducerState.fetchState === 'error') {
         if (
-          stringifyIfNecessary(action.payload) !==
-          stringifyIfNecessary(reducerState.data)
+          stringifyIfNeeded(action.payload) !==
+          stringifyIfNeeded(reducerState.data)
         ) {
+          action.stateRef.current.data = action.payload;
           return { ...reducerState, data: action.payload };
         }
         return reducerState;
       }
+
+      action.stateRef.current.data = action.payload;
 
       return {
         called: true,
@@ -126,6 +123,8 @@ export const StateReducer = <TData>(
     case 'loading': {
       if (reducerState.fetchState === 'loading') return reducerState;
 
+      action.stateRef.current.fetchState = 'loading';
+
       return {
         called: true,
         fetchState: 'loading',
@@ -133,6 +132,7 @@ export const StateReducer = <TData>(
       };
     }
     case 'error': {
+      action.stateRef.current.fetchState = 'error';
       return {
         called: true,
         fetchState: 'error',
@@ -141,16 +141,11 @@ export const StateReducer = <TData>(
       };
     }
     case 'setData': {
-      if (
-        stringifyIfNecessary(action.payload) !==
-        stringifyIfNecessary(reducerState.data)
-      ) {
-        return {
-          ...reducerState,
-          data: action.payload,
-        };
-      }
-      return reducerState;
+      action.stateRef.current.data = action.payload;
+      return {
+        ...reducerState,
+        data: action.payload,
+      };
     }
     default:
       return reducerState;
@@ -177,6 +172,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
   optionsRef: { current: CommonHookOptions<TData, TVariables> };
+  stateRef: { current: IState<TData> };
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
@@ -202,11 +198,14 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       effects,
       type = 'query',
       creationHeaders = defaultEmptyObject,
+      stateRef,
     } = argsRef.current;
 
     effects.onPreEffect?.();
 
-    dispatch({ type: 'loading' });
+    if (stateRef.current.fetchState !== 'loading') {
+      dispatch({ type: 'loading', stateRef });
+    }
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -249,6 +248,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       dispatch({
         type: 'error',
         payload: errorPayload || [],
+        stateRef,
       });
 
       throw new Error(errorText);
@@ -264,6 +264,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       dispatch({
         type: 'error',
         payload: errorGraphqlError,
+        stateRef,
       });
     } else {
       effects.onSuccessEffect?.();
@@ -320,7 +321,9 @@ export const SharedCache = {
   subscribeHookPool: (hookId: string, data: Hook) => {
     if (process.env.NODE_ENV !== 'production') {
       if (hookId in SharedCache.hooksPool) {
-        console.warn('Duplicated hook id, previous hook overwriten!');
+        console.warn(
+          `Duplicated hook id "${hookId}", previous hook overwriten!`
+        );
       }
     }
     SharedCache.hooksPool[hookId] = data;

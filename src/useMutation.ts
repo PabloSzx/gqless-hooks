@@ -79,6 +79,7 @@ export const createUseMutation = <
             dispatch({
               type: 'setData',
               payload: undefined,
+              stateRef,
             });
           }
         }
@@ -88,6 +89,7 @@ export const createUseMutation = <
     type: 'mutation',
     creationHeaders,
     optionsRef,
+    stateRef,
   });
 
   const initialMutationClient = useMemo(() => {
@@ -147,6 +149,7 @@ export const createUseMutation = <
       dispatch({
         type: 'done',
         payload: dataValue,
+        stateRef,
       });
 
       return dataValue;
@@ -184,7 +187,7 @@ export const createUseMutation = <
         state: stateRef,
       });
     }
-    return undefined;
+    return;
   }, [hookId]);
 
   const isStateDone = state.fetchState === 'done';
