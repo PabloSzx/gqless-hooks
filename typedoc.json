@@ -1,0 +1,7 @@
+{
+  "out": "./docs",
+  "excludeNotDocumented": true,
+  "ignoreCompilerErrors": false,
+  "includeDeclarations": true,
+  "excludeExternals": true
+}

@@ -1,0 +1,199 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>gqless-hooks</title>
+	<meta name="description" content="Documentation for gqless-hooks">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="assets/js/search.json" data-base=".">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="index.html" class="title">gqless-hooks</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="globals.html">Globals</a>
+				</li>
+			</ul>
+			<h1>gqless-hooks</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<div class="tsd-panel tsd-typography">
+				<a href="#gqless-hooks" id="gqless-hooks" style="color: inherit; text-decoration: none;">
+					<h1>gqless-hooks</h1>
+				</a>
+				<p><a href="https://badge.fury.io/js/gqless-hooks"><img src="https://badge.fury.io/js/gqless-hooks.svg" alt="npm version"></a>
+					<a href="https://bundlephobia.com/result?p=gqless-hooks"><img src="https://badgen.net/bundlephobia/minzip/gqless-hooks" alt="bundlephobia"></a>
+					<a href="https://github.com/pabloszx/gqless-hooks"><img src="https://badgen.net/github/license/pabloszx/gqless-hooks" alt="license"></a>
+				<a href="https://github.com/pabloszx/gqless-hooks"><img src="https://badgen.net/github/status/pabloszx/gqless-hooks" alt="combined statuses"></a></p>
+				<pre><code class="language-sh">yarn add gqless-hooks
+<span class="hljs-comment"># or</span>
+npm install gqless-hooks</code></pre>
+				<p>This library creates a couple of hooks to interact with <a href="https://gqless.dev/"><strong>gqless</strong></a>, all while being type-safe.</p>
+				<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+				<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+				<p><strong>Table of Contents</strong></p>
+				<ul>
+					<li><a href="#usage">Usage</a></li>
+					<li><a href="#about-it">About it</a></li>
+					<li><a href="#future">Future</a></li>
+				</ul>
+				<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+				<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+					<h2>Usage</h2>
+				</a>
+				<p>This library should ideally be imported and used at <strong>src/graphql/client.ts</strong> (<em>this is default location, could be anywhere you previously set it up</em>)</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { Client, QueryFetcher } <span class="hljs-keyword">from</span> <span class="hljs-string">'gqless'</span>;
+
+<span class="hljs-keyword">import</span> { Mutation, Query, schema } <span class="hljs-keyword">from</span> <span class="hljs-string">'./generated'</span>;
+
+<span class="hljs-keyword">import</span> { createUseMutation, createUseQuery } <span class="hljs-keyword">from</span> <span class="hljs-string">'gqless-hooks'</span>;
+
+<span class="hljs-keyword">const</span> endpoint = <span class="hljs-string">'...'</span>;
+
+<span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> query = client.query;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> useMutation = createUseMutation&lt;Mutation&gt;({
+  endpoint,
+  schema,
+});
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> useQuery = createUseQuery&lt;Query&gt;({
+  endpoint,
+  schema,
+});</code></pre>
+				<p>Then anywhere you want to use it, you import it just like the default <strong>query</strong>.</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { useMutation, useQuery } <span class="hljs-keyword">from</span> <span class="hljs-string">'../src/graphql'</span>;
+
+<span class="hljs-keyword">const</span> Component = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+  <span class="hljs-keyword">const</span> [helloWorldMutation, helloWorldData] = useMutation(
+    <span class="hljs-function">(<span class="hljs-params">{ helloWorldMutation }</span>) =&gt;</span> {
+      <span class="hljs-keyword">const</span> { id, label } = helloWorldMutation({ arg: <span class="hljs-string">'hello'</span> });
+
+      <span class="hljs-keyword">return</span> { id, label };
+    }
+  );
+
+  <span class="hljs-comment">// helloWorldData === { data, state = "loading" | "error" | "waiting" | "done", errors = GraphqlError[] | undefined }</span>
+
+  <span class="hljs-comment">// helloWorldMutation works as initiator of the mutation or refetch.</span>
+
+  <span class="hljs-keyword">const</span> [helloWorldData, { callback, refetch, cacheRefetch }] = useQuery(
+    <span class="hljs-function">(<span class="hljs-params">{ helloWorldQuery: { id, label } }</span>) =&gt;</span> ({ id, label }),
+    {
+      <span class="hljs-comment">// if lazy == true, wait until function from returned array is called</span>
+      lazy: <span class="hljs-literal">true</span>,
+    }
+  );
+
+  <span class="hljs-comment">// helloWorldData === { data = { id,label } | undefined | null, state = "loading" | "error" | "waiting" | "done", errors = GraphqlError[] | undefined }</span>
+
+  <span class="hljs-comment">// callback and refetch work as initiators of the query or refetch.</span>
+};</code></pre>
+				<a href="#about-it" id="about-it" style="color: inherit; text-decoration: none;">
+					<h2>About it</h2>
+				</a>
+				<p>These hooks are a proof of concept that ended up working and is a good workaround until <strong>React Suspense</strong> is officially released (with <strong>good SSR support</strong>) and <a href="https://github.com/samdenty/gqless/issues/51">Mutation are officially supported by gqless</a>.</p>
+				<p>If you are only using these hooks and not the default <strong>query</strong> from gqless, you <strong>don&#39;t need to use the graphql HOC</strong>.</p>
+				<a href="#future" id="future" style="color: inherit; text-decoration: none;">
+					<h2>Future</h2>
+				</a>
+				<ul>
+					<li>Add support for Pagination, with a <strong>fetchMore</strong>-alike (since gqless doesn&#39;t have planned support for it for the foreseeable future)</li>
+				</ul>
+			</div>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="globals.html"><em>Globals</em></a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_common_.html">&quot;common&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_index_.html">&quot;index&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_usemutation_.html">&quot;use<wbr>Mutation&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_usequery_.html">&quot;use<wbr>Query&quot;</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
+				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="assets/js/main.js"></script>
+<script>if (location.protocol == 'file:') document.write('<script src="assets/js/search.js"><' + '/script>');</script>
+</body>
+</html>

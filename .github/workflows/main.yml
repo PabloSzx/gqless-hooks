@@ -40,3 +40,8 @@ jobs:
         run: yarn build
         env:
           CI: true
+
+      - name: Upload Coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: bash <(curl -s https://codecov.io/bash)
