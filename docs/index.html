@@ -68,16 +68,23 @@
 				<p><a href="https://badge.fury.io/js/gqless-hooks"><img src="https://badge.fury.io/js/gqless-hooks.svg" alt="npm version"></a>
 					<a href="https://bundlephobia.com/result?p=gqless-hooks"><img src="https://badgen.net/bundlephobia/minzip/gqless-hooks" alt="bundlephobia"></a>
 					<a href="https://github.com/pabloszx/gqless-hooks"><img src="https://badgen.net/github/license/pabloszx/gqless-hooks" alt="license"></a>
-				<a href="https://github.com/pabloszx/gqless-hooks"><img src="https://badgen.net/github/status/pabloszx/gqless-hooks" alt="combined statuses"></a></p>
+					<a href="https://github.com/pabloszx/gqless-hooks"><img src="https://badgen.net/github/status/pabloszx/gqless-hooks/master" alt="combined checks"></a>
+				<a href="https://codecov.io/gh/PabloSzx/gqless-hooks"><img src="https://codecov.io/gh/PabloSzx/gqless-hooks/branch/master/graph/badge.svg" alt="codecov"></a></p>
 				<pre><code class="language-sh">yarn add gqless-hooks
 <span class="hljs-comment"># or</span>
 npm install gqless-hooks</code></pre>
 				<p>This library creates a couple of hooks to interact with <a href="https://gqless.dev/"><strong>gqless</strong></a>, all while being type-safe.</p>
+				<a href="#if-you-are-not-familiar-with-gqless-please-check-httpsgqlessdev" id="if-you-are-not-familiar-with-gqless-please-check-httpsgqlessdev" style="color: inherit; text-decoration: none;">
+					<h2>If you are not familiar with <strong>gqless</strong> please check <a href="https://gqless.dev/"><strong>https://gqless.dev/</strong></a></h2>
+				</a>
 				<!-- START doctoc generated TOC please keep comment here to allow auto update -->
 				<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 				<p><strong>Table of Contents</strong></p>
 				<ul>
 					<li><a href="#usage">Usage</a></li>
+					<li><a href="#features">Features</a></li>
+					<li><a href="#docs-and-api-reference">Docs and API Reference</a></li>
+					<li><a href="#usage-tips">Usage tips</a></li>
 					<li><a href="#about-it">About it</a></li>
 					<li><a href="#future">Future</a></li>
 				</ul>
@@ -105,7 +112,7 @@ npm install gqless-hooks</code></pre>
   endpoint,
   schema,
 });</code></pre>
-				<p>Then anywhere you want to use it, you import it just like the default <strong>query</strong>.</p>
+				<p>Then anywhere you want to use them, you import them just like the default vanilla <strong>query</strong>.</p>
 				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { useMutation, useQuery } <span class="hljs-keyword">from</span> <span class="hljs-string">'../src/graphql'</span>;
 
 <span class="hljs-keyword">const</span> Component = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
@@ -119,7 +126,7 @@ npm install gqless-hooks</code></pre>
 
   <span class="hljs-comment">// helloWorldData === { data, state = "loading" | "error" | "waiting" | "done", errors = GraphqlError[] | undefined }</span>
 
-  <span class="hljs-comment">// helloWorldMutation works as initiator of the mutation or refetch.</span>
+  <span class="hljs-comment">// helloWorldMutation works as initiator of the mutation or recall.</span>
 
   <span class="hljs-keyword">const</span> [helloWorldData, { callback, refetch, cacheRefetch }] = useQuery(
     <span class="hljs-function">(<span class="hljs-params">{ helloWorldQuery: { id, label } }</span>) =&gt;</span> ({ id, label }),
@@ -133,6 +140,59 @@ npm install gqless-hooks</code></pre>
 
   <span class="hljs-comment">// callback and refetch work as initiators of the query or refetch.</span>
 };</code></pre>
+				<a href="#features" id="features" style="color: inherit; text-decoration: none;">
+					<h2>Features</h2>
+				</a>
+				<ul>
+					<li>Shared global cache using policies.</li>
+					<li>Polling</li>
+					<li>Automatic refetch on variables change</li>
+					<li>Shared hooks pool through unique identifiers, available via <strong>onCompleted</strong> event on every hook.</li>
+				</ul>
+				<a href="#docs-and-api-reference" id="docs-and-api-reference" style="color: inherit; text-decoration: none;">
+					<h2>Docs and API Reference</h2>
+				</a>
+				<p>You can check <a href="https://pabloszx.github.io/gqless-hooks/">https://pabloszx.github.io/gqless-hooks/</a> for some documentation and API Reference, all generated through it&#39;s strong type-safety using <a href="https://typedoc.org/">TypeDoc</a>.</p>
+				<p>Also keep in mind that these hooks are heavily inspired by <a href="https://www.apollographql.com/docs/react/">React Apollo GraphQL</a></p>
+				<ul>
+					<li><strong>useQuery</strong> is inspired by <a href="https://www.apollographql.com/docs/react/data/queries/#usequery-api">Apollo useQuery</a></li>
+					<li><strong>useMutation</strong> is inspired by <a href="https://www.apollographql.com/docs/react/data/mutations/#usemutation-api">Apollo useMutation</a></li>
+				</ul>
+				<a href="#usage-tips" id="usage-tips" style="color: inherit; text-decoration: none;">
+					<h2>Usage tips</h2>
+				</a>
+				<p>Due to how <strong>gqless</strong> works, in the <strong>query</strong> and <strong>mutation</strong> hook functions, when you return some data, you have to explicitly access it&#39;s properties for it to detect it&#39;s requirements, this means in practice that if you have an <strong>object</strong>, you have to explictly explore its properties (<em>destructuring for example</em>) and return them, and for <strong>arrays</strong> is the same, but for them it&#39;s recommended to use <em>array</em><strong>.map(...)</strong>.</p>
+				<p>For example</p>
+				<pre><code class="language-ts">useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema, variables</span>) =&gt;</span> {
+    <span class="hljs-comment">// variables === { b: 2 }</span>
+    <span class="hljs-keyword">const</span> { field1, field2 } = schema.helloWorldObj;
+
+    <span class="hljs-keyword">return</span> { field1, field2 };
+
+    <span class="hljs-comment">// return helloWorldObj; &lt;- would return an empty object</span>
+  },
+  {
+    variables: {
+      b: <span class="hljs-number">2</span>,
+    },
+  }
+);
+useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema, variables</span>) =&gt;</span> {
+    <span class="hljs-comment">// variables === { a: 1 }</span>
+    <span class="hljs-keyword">const</span> array = schema.helloWorldArray;
+
+    <span class="hljs-keyword">return</span> array.map(<span class="hljs-function">(<span class="hljs-params">{ fieldA, fieldB }</span>) =&gt;</span> ({ fieldA, fieldB }));
+
+    <span class="hljs-comment">// return array; &lt;- would return an empty array</span>
+  },
+  {
+    variables: {
+      a: <span class="hljs-number">1</span>,
+    },
+  }
+);</code></pre>
 				<a href="#about-it" id="about-it" style="color: inherit; text-decoration: none;">
 					<h2>About it</h2>
 				</a>
@@ -142,7 +202,9 @@ npm install gqless-hooks</code></pre>
 					<h2>Future</h2>
 				</a>
 				<ul>
-					<li>Add support for Pagination, with a <strong>fetchMore</strong>-alike (since gqless doesn&#39;t have planned support for it for the foreseeable future)</li>
+					<li>Add more examples of usage</li>
+					<li>Add support for Subscriptions</li>
+					<li>Add support for Pagination with a <strong>fetchMore</strong>-alike (since gqless doesn&#39;t have planned support for it for the foreseeable future)</li>
 				</ul>
 			</div>
 		</div>
