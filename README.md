@@ -3,7 +3,8 @@
 [![npm version](https://badge.fury.io/js/gqless-hooks.svg)](https://badge.fury.io/js/gqless-hooks)
 [![bundlephobia](https://badgen.net/bundlephobia/minzip/gqless-hooks)](https://bundlephobia.com/result?p=gqless-hooks)
 [![license](https://badgen.net/github/license/pabloszx/gqless-hooks)](https://github.com/pabloszx/gqless-hooks)
-[![combined checks](https://badgen.net/github/checks/pabloszx/gqless-hooks)](https://github.com/pabloszx/gqless-hooks)
+[![combined checks](https://badgen.net/github/status/pabloszx/gqless-hooks/master)](https://github.com/pabloszx/gqless-hooks)
+[![codecov](https://codecov.io/gh/PabloSzx/gqless-hooks/branch/master/graph/badge.svg)](https://codecov.io/gh/PabloSzx/gqless-hooks)
 
 ```sh
 yarn add gqless-hooks
