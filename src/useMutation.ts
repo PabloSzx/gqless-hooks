@@ -13,7 +13,6 @@ import {
   Maybe,
   SharedCache,
   StateReducer,
-  StateReducerInitialState,
   useFetchCallback,
 } from './common';
 
@@ -29,10 +28,6 @@ interface MutationCallbackArgs<Mutation, TData, TVariables extends IVariables> {
    * Variables to be used instead of the specified in the hook itself
    */
   variables?: TVariables;
-  /**
-   * fetchPolicy to override the policy given in the hook itself.
-   */
-  fetchPolicy?: FetchPolicy;
 }
 
 /**
@@ -117,17 +112,16 @@ export const createUseMutation = <
     options: MutationOptions<TData, TVariables> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
-    const { fetchPolicy, hookId } = (optionsRef.current = defaultOptions(
-      options
-    ));
+    const { hookId } = (optionsRef.current = defaultOptions(options));
 
     const mutationFnRef = useRef(mutationFn);
     mutationFnRef.current = mutationFn;
 
-    const [state, dispatch] = useReducer<IStateReducer<TData>>(
-      StateReducer,
-      StateReducerInitialState<TData>(true)
-    );
+    const [state, dispatch] = useReducer<IStateReducer<TData>>(StateReducer, {
+      fetchState: 'waiting',
+      called: false,
+      data: undefined,
+    });
     const stateRef = useRef(state);
     stateRef.current = state;
 
@@ -135,18 +129,6 @@ export const createUseMutation = <
       dispatch,
       endpoint,
       effects: {
-        onPreEffect: () => {
-          switch (fetchPolicy) {
-            case 'no-cache':
-            case undefined: {
-              dispatch({
-                type: 'setData',
-                payload: undefined,
-                stateRef,
-              });
-            }
-          }
-        },
         onErrorEffect: logDevErrors,
       },
       type: 'mutation',
@@ -172,10 +154,7 @@ export const createUseMutation = <
         const {
           mutation = mutationFnRef.current,
           variables: variablesArgs,
-          fetchPolicy = optionsRef.current.fetchPolicy,
         } = mutationArgs;
-
-        optionsRef.current.fetchPolicy = fetchPolicy;
 
         const variables: TVariables =
           variablesArgs ||
@@ -203,13 +182,7 @@ export const createUseMutation = <
 
         const dataValue = mutation(client.query, variables);
 
-        if (fetchPolicy !== 'no-cache') {
-          client.cache.rootValue = SharedCache.mergeCache(
-            client.cache.rootValue
-          );
-
-          mutationClientRef.current = client;
-        }
+        mutationClientRef.current = client;
 
         dispatch({
           type: 'done',
@@ -229,26 +202,13 @@ export const createUseMutation = <
         return SharedCache.subscribeHookPool(hookId, {
           callback: async (args) => {
             const variables = args?.variables as TVariables | undefined;
-            const fetchPolicy = args?.fetchPolicy;
+
             return (await mutationCallbackRef.current({
               variables,
-              fetchPolicy,
             })) as any;
           },
-          refetch: async (args) => {
-            const variables = args?.variables as TVariables | undefined;
-            return (await mutationCallbackRef.current({
-              variables,
-              fetchPolicy: 'cache-and-network',
-            })) as any;
-          },
-          cacheRefetch: async (args) => {
-            const variables = args?.variables as TVariables | undefined;
-            return (await mutationCallbackRef.current({
-              variables,
-              fetchPolicy: 'cache-only',
-            })) as any;
-          },
+          refetch: null,
+          cacheRefetch: null,
           state: stateRef,
         });
       }

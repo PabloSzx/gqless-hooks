@@ -55,13 +55,6 @@ export type IVariables = Record<string, unknown>;
 
 export interface CommonHookOptions<TData, TVariables extends IVariables> {
   /**
-   * Fetch policy used for the hook.
-   *
-   * Based in **Apollo fetchPolicy** behaviour
-   * https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
-   */
-  fetchPolicy?: FetchPolicy;
-  /**
    * Event called on every successful hook call. (except "cache-only" calls)
    *
    * It first receives the resulting **data** of the hook call
@@ -137,26 +130,6 @@ export type IDispatch<TData> =
   | IDispatchAction<TData, 'done', Maybe<TData>>
   | IDispatchAction<TData, 'error', GraphQLError[]>
   | IDispatchAction<TData, 'setData', Maybe<TData>>;
-
-const LazyInitialState: IState<any> = {
-  fetchState: 'waiting',
-  called: false,
-  data: undefined,
-};
-
-const EarlyInitialState: IState<any> = {
-  fetchState: 'loading',
-  called: true,
-  data: undefined,
-};
-
-export const StateReducerInitialState = <TData>(
-  lazy: boolean
-): IState<TData> => {
-  if (lazy) return LazyInitialState;
-
-  return EarlyInitialState;
-};
 
 export type IStateReducer<TData> = Reducer<IState<TData>, IDispatch<TData>>;
 
@@ -245,7 +218,11 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   };
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
-  optionsRef: { current: CommonHookOptions<TData, TVariables> };
+  optionsRef: {
+    current: CommonHookOptions<TData, TVariables> & {
+      fetchPolicy?: FetchPolicy;
+    };
+  };
   stateRef: { current: IState<TData> };
 }) => {
   const argsRef = useRef(args);
@@ -380,18 +357,19 @@ export interface Hook {
   /**
    * Hook callback using **cache-and-network** fetchPolicy.
    */
-  refetch: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
-    variables?: Variables;
-  }) => Promise<Maybe<Data>>;
+  refetch:
+    | (<Data = unknown, Variables extends IVariables = IVariables>(args?: {
+        variables?: Variables;
+      }) => Promise<Maybe<Data>>)
+    | null;
   /**
    * Hook callback using **cache-only** fetchPolicy.
    */
-  cacheRefetch: <
-    Data = unknown,
-    Variables extends IVariables = IVariables
-  >(args?: {
-    variables?: Variables;
-  }) => Promise<Maybe<Data>>;
+  cacheRefetch:
+    | (<Data = unknown, Variables extends IVariables = IVariables>(args?: {
+        variables?: Variables;
+      }) => Promise<Maybe<Data>>)
+    | null;
   /**
    * Current hook state.
    */

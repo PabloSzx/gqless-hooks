@@ -13,7 +13,6 @@ import {
   Maybe,
   SharedCache,
   StateReducer,
-  StateReducerInitialState,
   stringifyIfNeeded,
   useFetchCallback,
 } from './common';
@@ -138,7 +137,7 @@ export type UseQuery<Query> = <TData, TVariables extends IVariables>(
 export interface QueryOptions<TData, TVariables extends IVariables>
   extends CommonHookOptions<TData, TVariables> {
   /**
-   * Fetch policy used for the hook.
+   * Fetch policy used for the query hook.
    *
    * If not specified, by default is "cache-first", but if **lazy**
    * is **true**, it's default is "cache-and-network"
@@ -193,7 +192,17 @@ export const createUseQuery = <
 
     const [state, dispatch] = useReducer<IStateReducer<TData>>(
       StateReducer,
-      StateReducerInitialState<TData>(lazy)
+      lazy
+        ? {
+            fetchState: 'waiting',
+            called: false,
+            data: undefined,
+          }
+        : {
+            fetchState: 'loading',
+            called: true,
+            data: undefined,
+          }
     );
     const stateRef = useRef(state);
     stateRef.current = state;

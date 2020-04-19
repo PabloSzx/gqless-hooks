@@ -130,7 +130,7 @@ describe('basic usage and cache', () => {
     });
 
     expect(nRenderCache.renders.n).toBe(2);
-    expect(nRenderCacheAndNetwork.renders.n).toBe(1);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
     expect(nRenderFirst.renders.n).toBe(2);
 
     expect(otherQueryNetwork.result.current[0].fetchState).toBe('loading');
@@ -141,7 +141,7 @@ describe('basic usage and cache', () => {
         expect(otherQueryNetwork.result.current[0].fetchState).toBe('done');
       }, 500);
     });
-    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(3);
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
     expect(nRenderFirst.renders.n).toBe(2);
 
