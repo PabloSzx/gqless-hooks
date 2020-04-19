@@ -1,8 +1,9 @@
 import 'isomorphic-unfetch';
 
-import { DataTrait, QueryFetcher, Value } from 'gqless';
+import { QueryFetcher } from 'gqless';
 import { GraphQLError } from 'graphql';
 import { Dispatch, Reducer, useCallback, useRef } from 'react';
+import { QueryFn } from 'useQuery';
 
 /**
  * Serializable headers
@@ -54,13 +55,6 @@ export interface CreateOptions<Schema> {
 export type IVariables = Record<string, unknown>;
 
 export interface CommonHookOptions<TData, TVariables extends IVariables> {
-  /**
-   * Fetch policy used for the hook.
-   *
-   * Based in **Apollo fetchPolicy** behaviour
-   * https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
-   */
-  fetchPolicy?: FetchPolicy;
   /**
    * Event called on every successful hook call. (except "cache-only" calls)
    *
@@ -153,9 +147,9 @@ const EarlyInitialState: IState<any> = {
 export const StateReducerInitialState = <TData>(
   lazy: boolean
 ): IState<TData> => {
-  if (lazy) return LazyInitialState;
+  if (lazy) return { ...LazyInitialState };
 
-  return EarlyInitialState;
+  return { ...EarlyInitialState };
 };
 
 export type IStateReducer<TData> = Reducer<IState<TData>, IDispatch<TData>>;
@@ -245,7 +239,11 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   };
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
-  optionsRef: { current: CommonHookOptions<TData, TVariables> };
+  optionsRef: {
+    current: CommonHookOptions<TData, TVariables> & {
+      fetchPolicy?: FetchPolicy;
+    };
+  };
   stateRef: { current: IState<TData> };
 }) => {
   const argsRef = useRef(args);
@@ -253,11 +251,10 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
 
   return useCallback<QueryFetcher>(async (query, variables) => {
     const {
-      fetchPolicy,
       headers = defaultEmptyObject,
       onError,
+      fetchPolicy,
     } = argsRef.current.optionsRef.current;
-
     switch (fetchPolicy) {
       case 'cache-only': {
         return {
@@ -348,17 +345,6 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   }, []);
 };
 
-function concatCacheMap(
-  map: Map<Value<DataTrait>, Set<string | number>>,
-  ...iterables: Map<Value<DataTrait>, Set<string | number>>[]
-) {
-  for (const iterable of iterables) {
-    for (const item of iterable) {
-      map.set(...item);
-    }
-  }
-}
-
 /**
  * Hooks pool of **gqless-hooks**.
  *
@@ -398,15 +384,46 @@ export interface Hook {
   state: Readonly<{ current: Readonly<IState<any>> }>;
 }
 
+export type CacheSubscribeFn = (data: any) => Promise<void>;
+
+export type SubscriberHookFn = {
+  fn: QueryFn<any, any, any>;
+  variables: string;
+};
+
 export const SharedCache = {
-  value: undefined as Value<DataTrait> | undefined,
+  cacheData: new Map() as Map<QueryFn<any, any, any>, Record<string, any>>,
+  cacheSubscribers: new Map() as Map<
+    QueryFn<any, any, any>,
+    Record<string, Set<CacheSubscribeFn>>
+  >,
 
-  cacheSubscribers: new Set<() => Promise<void>>(),
+  subscribeCache: (key: SubscriberHookFn, fn: CacheSubscribeFn) => {
+    let keySubscribers = SharedCache.cacheSubscribers.get(key.fn) as Record<
+      string,
+      Set<CacheSubscribeFn>
+    >;
 
-  subscribeCache: (fn: () => Promise<void>) => {
-    SharedCache.cacheSubscribers.add(fn);
+    if (!keySubscribers) {
+      keySubscribers = { [key.variables]: new Set() };
+      SharedCache.cacheSubscribers.set(key.fn, keySubscribers);
+    }
+
+    if (key.variables in keySubscribers) {
+      keySubscribers[key.variables].add(fn);
+    } else {
+      const newVariablesSet = (keySubscribers[key.variables] = new Set());
+      newVariablesSet.add(fn);
+    }
+
     return () => {
-      SharedCache.cacheSubscribers.delete(fn);
+      keySubscribers[key.variables].delete(fn);
+      if (keySubscribers[key.variables].size === 0) {
+        delete keySubscribers[key.variables];
+      }
+      if (Object.keys(keySubscribers).length === 0) {
+        SharedCache.cacheSubscribers.delete(key.fn);
+      }
     };
   },
 
@@ -426,33 +443,25 @@ export const SharedCache = {
     };
   },
 
-  initialCache: (cacheRootValue: Value<DataTrait>) => {
-    if (SharedCache.value === undefined) {
-      SharedCache.value = cacheRootValue;
+  cacheSet: (key: SubscriberHookFn, data: any, fnSetter: CacheSubscribeFn) => {
+    const cacheVariablesObj = SharedCache.cacheData.get(key.fn);
 
-      cacheRootValue.onSet(() => {
-        if (SharedCache.cacheSubscribers.size) {
-          for (const subscriber of SharedCache.cacheSubscribers) {
-            subscriber().catch(console.error);
-          }
-        }
-      });
-    }
-
-    return SharedCache.value;
-  },
-
-  mergeCache: (cacheRootValue: Value<DataTrait>) => {
-    if (SharedCache.value) {
-      concatCacheMap(SharedCache.value.references, cacheRootValue.references);
-      SharedCache.value.data = Object.assign(
-        {},
-        SharedCache.value.data,
-        cacheRootValue.data
-      );
+    if (cacheVariablesObj) {
+      cacheVariablesObj[key.variables] = data;
     } else {
-      SharedCache.value = SharedCache.initialCache(cacheRootValue);
+      SharedCache.cacheData.set(key.fn, { [key.variables]: data });
     }
-    return SharedCache.value;
+
+    const cacheSubscribers = SharedCache.cacheSubscribers.get(key.fn)?.[
+      key.variables
+    ];
+
+    if (cacheSubscribers) {
+      for (const subscriber of cacheSubscribers) {
+        if (subscriber !== fnSetter) {
+          subscriber(data);
+        }
+      }
+    }
   },
 };

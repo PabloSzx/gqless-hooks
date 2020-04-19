@@ -1,6 +1,12 @@
 import { Client, QueryFetcher } from 'gqless';
 import { schema, Query, Mutation } from './generated';
-import { createUseQuery, createUseMutation } from '../../../src';
+import {
+  createUseQuery,
+  createUseMutation,
+  QueryFn,
+  MutationFn,
+  IVariables,
+} from '../../../src';
 
 const endpoint = 'http://localhost:9999/graphql';
 
@@ -35,7 +41,17 @@ export const useQuery = createUseQuery<Query>({
   schema,
 });
 
+export type QueryFunction<
+  TData = unknown,
+  TVariables extends IVariables = IVariables
+> = QueryFn<Query, TData, TVariables>;
+
 export const useMutation = createUseMutation<Mutation>({
   endpoint,
   schema,
 });
+
+export type MutationFunction<
+  TData = unknown,
+  TVariables extends IVariables = IVariables
+> = MutationFn<Mutation, TData, TVariables>;

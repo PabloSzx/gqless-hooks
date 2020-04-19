@@ -7,7 +7,11 @@ import {
   renderHook,
 } from '@testing-library/react-hooks';
 
-import { useMutation, useQuery } from './generated/graphql/client';
+import {
+  useMutation,
+  useQuery,
+  QueryFunction,
+} from './generated/graphql/client';
 import { close, isClosed, isListening } from './server';
 
 afterEach(async () => {
@@ -37,6 +41,11 @@ const renderCount = () => {
 };
 
 describe('basic usage and cache', () => {
+  const QueryZxc: QueryFunction<string> = ({ hello }) => {
+    return hello({
+      name: 'zxc',
+    });
+  };
   test('query works and minimizes renders calls', async () => {
     const nRenderFirst = renderCount();
 
@@ -44,18 +53,9 @@ describe('basic usage and cache', () => {
 
     const { result } = renderHook(() => {
       nRenderFirst.render();
-      const hook = useQuery(
-        ({ hello }) => {
-          const result = hello({
-            name: 'zxc',
-          });
-
-          return result;
-        },
-        {
-          hookId: 'queryhello1',
-        }
-      );
+      const hook = useQuery(QueryZxc, {
+        hookId: 'queryhello1',
+      });
 
       return hook;
     });
@@ -83,26 +83,16 @@ describe('basic usage and cache', () => {
 
     const otherQuery = renderHook(() => {
       nRenderCache.render();
-      const hook = useQuery(
-        ({ hello }) => {
-          const result = hello({
-            name: 'zxc',
-          });
-
-          return result;
-        },
-        {
-          hookId: 'queryhello2',
-        }
-      );
+      const hook = useQuery(QueryZxc, {
+        hookId: 'queryhello2',
+      });
 
       return hook;
     });
 
-    expect(nRenderCache.renders.n).toBe(2);
-
-    expect(otherQuery.result.current[0].fetchState).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
+    expect(otherQuery.result.current[0].fetchState).toBe('done');
+    expect(nRenderCache.renders.n).toBe(2);
 
     expect(nRenderCache.renders.n).toBe(2);
     expect(nRenderFirst.renders.n).toBe(2);
@@ -113,24 +103,15 @@ describe('basic usage and cache', () => {
 
     const otherQueryNetwork = renderHook(() => {
       nRenderCacheAndNetwork.render();
-      const hook = useQuery(
-        ({ hello }) => {
-          const result = hello({
-            name: 'zxc',
-          });
-
-          return result;
-        },
-        {
-          fetchPolicy: 'cache-and-network',
-        }
-      );
+      const hook = useQuery(QueryZxc, {
+        fetchPolicy: 'cache-and-network',
+      });
 
       return hook;
     });
 
     expect(nRenderCache.renders.n).toBe(2);
-    expect(nRenderCacheAndNetwork.renders.n).toBe(1);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
     expect(nRenderFirst.renders.n).toBe(2);
 
     expect(otherQueryNetwork.result.current[0].fetchState).toBe('loading');
@@ -141,18 +122,12 @@ describe('basic usage and cache', () => {
         expect(otherQueryNetwork.result.current[0].fetchState).toBe('done');
       }, 500);
     });
-    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(3);
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
     expect(nRenderFirst.renders.n).toBe(2);
 
     const otherQueryAfterNewClient = renderHook(() => {
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
-
-        return result;
-      });
+      const hook = useQuery(QueryZxc);
 
       return hook;
     });
@@ -188,13 +163,7 @@ describe('basic usage and cache', () => {
     expect(result.current[1].data).toBe('mutation zxc');
 
     const otherQuery = renderHook(() => {
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
-
-        return result;
-      });
+      const hook = useQuery(QueryZxc);
 
       return hook;
     });
@@ -210,6 +179,9 @@ describe('detect variables change', () => {
       const nameState = useState('cvb');
       const hook = useQuery(
         ({ hello }, { name }) => {
+          console.log({
+            name,
+          });
           const result = hello({
             name,
           });
@@ -217,6 +189,7 @@ describe('detect variables change', () => {
           return result;
         },
         {
+          hookId: 'querycvb',
           variables: {
             name: nameState[0],
           },
@@ -225,6 +198,8 @@ describe('detect variables change', () => {
 
       return { hook, nameState };
     });
+
+    expect(query.result.current.hook[0].fetchState).toBe('loading');
 
     await act(async () => {
       await waitForExpect(() => {
@@ -244,32 +219,25 @@ describe('detect variables change', () => {
 });
 
 describe('multiple hooks usage and cache', () => {
+  const LoremIpsumQuery: QueryFunction = ({ loremIpsum }) => {
+    return loremIpsum.map((v) => v);
+  };
   test('array push and reset', async () => {
     const { result } = renderHook(() => {
-      const query1 = useQuery(
-        ({ loremIpsum }, args) => {
-          return loremIpsum.map((v) => v);
+      const query1 = useQuery(LoremIpsumQuery, {
+        headers: {
+          query1: '',
         },
-        {
-          headers: {
-            query1: '',
-          },
-          hookId: 'query1',
-        }
-      );
-      const query2 = useQuery(
-        ({ loremIpsum }, args) => {
-          return loremIpsum.map((v) => v);
+        hookId: 'query1',
+      });
+      const query2 = useQuery(LoremIpsumQuery, {
+        lazy: true,
+        headers: {
+          query2: '',
         },
-        {
-          lazy: true,
-          headers: {
-            query2: '',
-          },
-          hookId: 'query2',
-          fetchPolicy: 'cache-and-network',
-        }
-      );
+        hookId: 'query2',
+        fetchPolicy: 'cache-and-network',
+      });
       const mutation1 = useMutation(({ resetLoremIpsum }) => {
         return resetLoremIpsum.map((v) => v);
       }, {});
@@ -303,8 +271,15 @@ describe('multiple hooks usage and cache', () => {
 
     await act(async () => {
       await waitForExpect(() => {
-        expect(result.current.query1[0].data).toHaveLength(2);
-      }, 500);
+        console.log(
+          result.current.query1[0].data,
+          'vs',
+          result.current.query2[0].data
+        );
+        expect(result.current.query1[0].data).toEqual(
+          result.current.query2[0].data
+        );
+      }, 100);
     });
 
     expect(result.current.query1[0].fetchState).toBe('done');

@@ -4,8 +4,9 @@ import { queryType, stringArg, makeSchema, mutationType } from '@nexus/schema';
 import bodyParser from 'body-parser';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
-const app = express();
+import wait from 'waait';
 
+const app = express();
 app.use(bodyParser.json());
 
 const loremIpsumArray: string[] = [];
@@ -19,7 +20,7 @@ const Query = queryType({
     t.list.string('loremIpsum', {
       nullable: false,
       resolve: async () => {
-        // await wait(300);
+        await wait(Math.round(Math.random() * 300));
 
         loremIpsumArray.push(loremIpsum());
 
@@ -38,7 +39,7 @@ const Mutation = mutationType({
     t.list.string('resetLoremIpsum', {
       nullable: false,
       resolve: async () => {
-        // await wait(200);
+        await wait(Math.round(Math.random() * 300));
 
         loremIpsumArray.splice(0, loremIpsumArray.length);
 
