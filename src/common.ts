@@ -1,8 +1,9 @@
 import 'isomorphic-unfetch';
 
-import { DataTrait, QueryFetcher, Value } from 'gqless';
+import { QueryFetcher } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, Reducer, useCallback, useRef } from 'react';
+import { Dispatch, Reducer, useCallback, useRef, useEffect } from 'react';
+import { QueryOptions } from 'useQuery';
 
 /**
  * Serializable headers
@@ -325,17 +326,6 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   }, []);
 };
 
-function concatCacheMap(
-  map: Map<Value<DataTrait>, Set<string | number>>,
-  ...iterables: Map<Value<DataTrait>, Set<string | number>>[]
-) {
-  for (const iterable of iterables) {
-    for (const item of iterable) {
-      map.set(...item);
-    }
-  }
-}
-
 /**
  * Hooks pool of **gqless-hooks**.
  *
@@ -374,18 +364,150 @@ export interface Hook {
    * Current hook state.
    */
   state: Readonly<{ current: Readonly<IState<any>> }>;
+  /**
+   * Set hook data
+   */
+  setData: (data: any) => void;
 }
 
+function usePreviousDistinct<T>(value: T): T | undefined {
+  const prevRef = useRef<T>();
+  const curRef = useRef<T>(value);
+  const isFirstMount = useRef(true);
+
+  if (!isFirstMount && curRef.current !== value) {
+    prevRef.current = curRef.current;
+    curRef.current = value;
+  }
+
+  if (isFirstMount.current) {
+    isFirstMount.current = false;
+  }
+
+  return prevRef.current;
+}
+
+export const useSubscribeCache = (args: {
+  sharedCacheId: string | undefined;
+  dispatch: Dispatch<IDispatch<any>>;
+  stateRef: {
+    current: IState<any>;
+  };
+  optionsRef: { current: QueryOptions<any, any> };
+}) => {
+  const argsRef = useRef(args);
+  const { sharedCacheId, stateRef, optionsRef } = (argsRef.current = args);
+  const previousCacheKey = usePreviousDistinct(sharedCacheId);
+
+  const firstMount = useRef(true);
+
+  const cacheSubscribeFnRef = useRef<CacheSubFn>();
+
+  const foundCache = useRef(false);
+
+  useEffect(() => {
+    if (sharedCacheId) {
+      const { stateRef, dispatch } = argsRef.current;
+      cacheSubscribeFnRef.current = (data) => {
+        if (stateRef.current.fetchState === 'done') {
+          if (
+            stringifyIfNeeded(data) !== stringifyIfNeeded(stateRef.current.data)
+          ) {
+            dispatch({
+              type: 'done',
+              payload: data,
+              stateRef,
+            });
+          }
+        }
+      };
+
+      return SharedCache.subscribeCache(
+        sharedCacheId,
+        cacheSubscribeFnRef.current
+      );
+    }
+
+    return;
+  }, [sharedCacheId]);
+
+  if (sharedCacheId && previousCacheKey !== sharedCacheId) {
+    if (firstMount.current) {
+      firstMount.current = false;
+
+      if (!optionsRef.current.lazy) {
+        switch (optionsRef.current.fetchPolicy) {
+          case 'cache-and-network':
+          case 'cache-first':
+          case 'cache-only': {
+            const cacheData = SharedCache.cacheData[sharedCacheId];
+            if (cacheData) {
+              stateRef.current.called = true;
+              stateRef.current.data = cacheData;
+              stateRef.current.errors = undefined;
+              if (optionsRef.current.fetchPolicy !== 'cache-and-network') {
+                foundCache.current = true;
+                stateRef.current.fetchState = 'done';
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    foundCache: foundCache.current,
+    cacheSubscribeFn: cacheSubscribeFnRef,
+  };
+};
+
+type CacheSubFn = (data: any) => void;
+
 export const SharedCache = {
-  value: undefined as Value<DataTrait> | undefined,
+  cacheData: {} as Record<string, any>,
 
-  cacheSubscribers: new Set<() => Promise<void>>(),
+  cacheSubscribers: {} as Record<string, Set<CacheSubFn>>,
 
-  subscribeCache: (fn: () => Promise<void>) => {
-    SharedCache.cacheSubscribers.add(fn);
+  subscribeCache: (cacheKey: string, fn: CacheSubFn) => {
+    let cacheKeySubscribers = SharedCache.cacheSubscribers[cacheKey];
+    if (cacheKeySubscribers) {
+      const cacheData = SharedCache.cacheData[cacheKey];
+      if (cacheData) {
+        fn(cacheData);
+      }
+    } else {
+      cacheKeySubscribers = new Set();
+      SharedCache.cacheSubscribers[cacheKey] = cacheKeySubscribers;
+    }
+
+    cacheKeySubscribers.add(fn);
+
     return () => {
-      SharedCache.cacheSubscribers.delete(fn);
+      cacheKeySubscribers.delete(fn);
+      if (cacheKeySubscribers.size === 0) {
+        delete SharedCache.cacheSubscribers[cacheKey];
+      }
     };
+  },
+
+  setCacheData: (
+    cacheKey: string,
+    data: any,
+    setter: { current?: CacheSubFn } | null
+  ) => {
+    SharedCache.cacheData[cacheKey] = data;
+    const cacheSubscribers = SharedCache.cacheSubscribers[cacheKey];
+    const cacherSubFn = setter?.current;
+
+    if (cacheSubscribers) {
+      for (const subscribeFn of cacheSubscribers) {
+        if (subscribeFn !== cacherSubFn) {
+          subscribeFn(data);
+        }
+      }
+    }
   },
 
   hooksPool: {} as HooksPool,
@@ -402,35 +524,5 @@ export const SharedCache = {
     return () => {
       delete SharedCache.hooksPool[hookId];
     };
-  },
-
-  initialCache: (cacheRootValue: Value<DataTrait>) => {
-    if (SharedCache.value === undefined) {
-      SharedCache.value = cacheRootValue;
-
-      cacheRootValue.onSet(() => {
-        if (SharedCache.cacheSubscribers.size) {
-          for (const subscriber of SharedCache.cacheSubscribers) {
-            subscriber().catch(console.error);
-          }
-        }
-      });
-    }
-
-    return SharedCache.value;
-  },
-
-  mergeCache: (cacheRootValue: Value<DataTrait>) => {
-    if (SharedCache.value) {
-      concatCacheMap(SharedCache.value.references, cacheRootValue.references);
-      SharedCache.value.data = Object.assign(
-        {},
-        SharedCache.value.data,
-        cacheRootValue.data
-      );
-    } else {
-      SharedCache.value = SharedCache.initialCache(cacheRootValue);
-    }
-    return SharedCache.value;
   },
 };

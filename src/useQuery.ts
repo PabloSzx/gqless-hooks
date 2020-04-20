@@ -15,6 +15,7 @@ import {
   StateReducer,
   stringifyIfNeeded,
   useFetchCallback,
+  useSubscribeCache,
 } from './common';
 
 /**
@@ -154,11 +155,13 @@ export interface QueryOptions<TData, TVariables extends IVariables>
    */
   pollInterval?: number;
   /**
-   * If this query handles big amount of data, it's good practice
-   * in terms of performance to enable this flag and only use the
-   * **cacheRefetch** callback when needed.
+   * Shared hook cache id
+   *
+   * In order to be able to sync different query hooks data
+   * you can specify a shared cache id between those hooks which
+   * will update each other data
    */
-  manualCacheRefetch?: boolean;
+  sharedCacheId?: string;
 }
 
 /**
@@ -180,7 +183,7 @@ export const createUseQuery = <
       lazy,
       pollInterval,
       variables,
-      manualCacheRefetch,
+      sharedCacheId,
       hookId,
     } = (optionsRef.current = defaultOptions(options));
 
@@ -222,12 +225,17 @@ export const createUseQuery = <
     const initialQueryClient = useMemo(() => {
       const client = new Client<Query>(schema.Query, fetchQuery);
 
-      client.cache.rootValue = SharedCache.initialCache(client.cache.rootValue);
-
       return client;
     }, [fetchQuery]);
 
     const queryClientRef = useRef<Client<Query>>(initialQueryClient);
+
+    const { foundCache, cacheSubscribeFn } = useSubscribeCache({
+      sharedCacheId,
+      dispatch,
+      stateRef,
+      optionsRef,
+    });
 
     const queryCallback = useCallback<QueryCallback<TData, Query, TVariables>>(
       async (queryArgs = defaultEmptyObject) => {
@@ -248,15 +256,36 @@ export const createUseQuery = <
 
         let dataValue: Maybe<TData> = null;
 
-        let newClientCreated = false;
-
         let fetchPromise: Promise<void> | undefined;
 
         let noCache = false;
 
+        let lazyCacheAndNetworkFoundCache = false;
+
         if (fetchPolicy === 'network-only' || fetchPolicy === 'no-cache') {
           noCache = true;
         } else {
+          if (optionsRef.current.lazy && !stateRef.current.called) {
+            // if this query is lazy, and it's first time called
+            if (optionsRef.current.sharedCacheId) {
+              const cacheData =
+                SharedCache.cacheData[optionsRef.current.sharedCacheId];
+              if (cacheData) {
+                stateRef.current.data = cacheData;
+                stateRef.current.errors = undefined;
+                stateRef.current.called = true;
+                if (fetchPolicy === 'cache-and-network') {
+                  lazyCacheAndNetworkFoundCache = true;
+                  stateRef.current.fetchState = 'loading';
+                } else {
+                  isFetchingRef.current = false;
+                  stateRef.current.fetchState = 'done';
+                  return cacheData;
+                }
+              }
+            }
+          }
+
           dataValue = query(client.query, variables);
         }
 
@@ -303,7 +332,10 @@ export const createUseQuery = <
           });
 
         if (noCache || !isFetchingGqless) {
-          if (fetchPolicy === 'cache-and-network') {
+          if (
+            fetchPolicy === 'cache-and-network' &&
+            !lazyCacheAndNetworkFoundCache
+          ) {
             if (
               stringifyIfNeeded(stateRef.current.data) !==
               stringifyIfNeeded(dataValue)
@@ -322,7 +354,6 @@ export const createUseQuery = <
             fetchPolicy === 'cache-and-network'
           ) {
             client = new Client<Query>(schema.Query, fetchQuery);
-            newClientCreated = true;
             queryClientRef.current = client;
 
             query(client.query, variables);
@@ -338,27 +369,34 @@ export const createUseQuery = <
           dataValue = query(client.query, variables);
         }
 
-        if (newClientCreated) {
-          client.cache.rootValue = SharedCache.mergeCache(
-            client.cache.rootValue
-          );
-        }
-
         dispatch({
           type: 'done',
           payload: dataValue,
           stateRef,
         });
 
+        if (optionsRef.current.sharedCacheId) {
+          SharedCache.setCacheData(
+            optionsRef.current.sharedCacheId,
+            dataValue,
+            cacheSubscribeFn
+          );
+        }
+
         return dataValue;
       },
-      [fetchQuery]
+      [fetchQuery, cacheSubscribeFn]
     );
 
     const queryCallbackRef = useRef(queryCallback);
     queryCallbackRef.current = queryCallback;
 
-    if (!isMountedRef.current && !isFetchingRef.current && !lazy) {
+    if (
+      !foundCache &&
+      !isMountedRef.current &&
+      !isFetchingRef.current &&
+      !lazy
+    ) {
       isFetchingRef.current = true;
       queryCallback().catch((error) => {
         console.error(error);
@@ -426,34 +464,6 @@ export const createUseQuery = <
     }, []);
 
     useEffect(() => {
-      if (!manualCacheRefetch) {
-        return SharedCache.subscribeCache(
-          () =>
-            new Promise((resolve, reject) => {
-              setTimeout(() => {
-                if (
-                  !isFetchingRef.current &&
-                  (optionsRef.current.lazy ? stateRef.current.called : true)
-                ) {
-                  isFetchingRef.current = true;
-
-                  queryCallbackRef
-                    .current({
-                      fetchPolicy: 'cache-only',
-                    })
-                    .then(() => {
-                      resolve();
-                    })
-                    .catch(reject);
-                }
-              }, 0);
-            })
-        );
-      }
-      return;
-    }, [manualCacheRefetch]);
-
-    useEffect(() => {
       if (hookId) {
         return SharedCache.subscribeHookPool(hookId, {
           callback: async (args) => {
@@ -479,6 +489,13 @@ export const createUseQuery = <
             })) as any;
           },
           state: stateRef,
+          setData: (data) => {
+            dispatch({
+              type: 'setData',
+              payload: data,
+              stateRef,
+            });
+          },
         });
       }
       return;

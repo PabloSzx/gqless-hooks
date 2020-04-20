@@ -53,6 +53,7 @@ describe('basic usage and cache', () => {
           return result;
         },
         {
+          sharedCacheId: 'queryhello1',
           hookId: 'queryhello1',
         }
       );
@@ -92,6 +93,7 @@ describe('basic usage and cache', () => {
           return result;
         },
         {
+          sharedCacheId: 'queryhello1',
           hookId: 'queryhello2',
         }
       );
@@ -99,12 +101,12 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
-    expect(nRenderCache.renders.n).toBe(2);
+    expect(nRenderCache.renders.n).toBe(1);
 
     expect(otherQuery.result.current[0].fetchState).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
 
-    expect(nRenderCache.renders.n).toBe(2);
+    expect(nRenderCache.renders.n).toBe(1);
     expect(nRenderFirst.renders.n).toBe(2);
 
     const nRenderCacheAndNetwork = renderCount();
@@ -122,6 +124,7 @@ describe('basic usage and cache', () => {
           return result;
         },
         {
+          sharedCacheId: 'queryhello1',
           fetchPolicy: 'cache-and-network',
         }
       );
@@ -129,8 +132,8 @@ describe('basic usage and cache', () => {
       return hook;
     });
 
-    expect(nRenderCache.renders.n).toBe(2);
-    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
+    expect(nRenderCache.renders.n).toBe(1);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(1);
     expect(nRenderFirst.renders.n).toBe(2);
 
     expect(otherQueryNetwork.result.current[0].fetchState).toBe('loading');
@@ -139,20 +142,27 @@ describe('basic usage and cache', () => {
     await act(async () => {
       await waitForExpect(() => {
         expect(otherQueryNetwork.result.current[0].fetchState).toBe('done');
-      }, 500);
+      }, 1500);
     });
-    expect(nRenderCacheAndNetwork.renders.n).toBe(3);
+    expect(nRenderCacheAndNetwork.renders.n).toBe(2);
     expect(otherQueryNetwork.result.current[0].data).toBe('query zxc!');
     expect(nRenderFirst.renders.n).toBe(2);
 
+    const nRenderOther = renderCount();
     const otherQueryAfterNewClient = renderHook(() => {
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
+      nRenderOther.render();
+      const hook = useQuery(
+        ({ hello }) => {
+          const result = hello({
+            name: 'zxc',
+          });
 
-        return result;
-      });
+          return result;
+        },
+        {
+          sharedCacheId: 'queryhello1',
+        }
+      );
 
       return hook;
     });
@@ -160,6 +170,7 @@ describe('basic usage and cache', () => {
 
     expect(otherQueryAfterNewClient.result.current[0].fetchState).toBe('done');
     expect(otherQueryAfterNewClient.result.current[0].data).toBe('query zxc!');
+    expect(nRenderOther.renders.n).toBe(1);
   });
 
   test('mutation works', async () => {
@@ -188,13 +199,18 @@ describe('basic usage and cache', () => {
     expect(result.current[1].data).toBe('mutation zxc');
 
     const otherQuery = renderHook(() => {
-      const hook = useQuery(({ hello }) => {
-        const result = hello({
-          name: 'zxc',
-        });
+      const hook = useQuery(
+        ({ hello }) => {
+          const result = hello({
+            name: 'zxc',
+          });
 
-        return result;
-      });
+          return result;
+        },
+        {
+          sharedCacheId: 'queryhello1',
+        }
+      );
 
       return hook;
     });
@@ -254,6 +270,7 @@ describe('multiple hooks usage and cache', () => {
           headers: {
             query1: '',
           },
+          sharedCacheId: 'loremipsumarray',
           hookId: 'query1',
         }
       );
@@ -267,6 +284,7 @@ describe('multiple hooks usage and cache', () => {
             query2: '',
           },
           hookId: 'query2',
+          sharedCacheId: 'loremipsumarray',
           fetchPolicy: 'cache-and-network',
         }
       );
@@ -295,17 +313,17 @@ describe('multiple hooks usage and cache', () => {
 
     await act(async () => {
       await result.current.query2[1].refetch();
-    });
 
-    expect(result.current.query2[0].fetchState).toBe('done');
-
-    expect(result.current.query2[0].data).toHaveLength(2);
-
-    await act(async () => {
       await waitForExpect(() => {
-        expect(result.current.query1[0].data).toHaveLength(2);
+        expect(result.current.query2[0].data).toHaveLength(2);
+
+        expect(result.current.query2[0].fetchState).toBe('done');
       }, 500);
     });
+
+    await waitForExpect(() => {
+      expect(result.current.query1[0].data).toHaveLength(2);
+    }, 500);
 
     expect(result.current.query1[0].fetchState).toBe('done');
     expect(result.current.query2[0].fetchState).toBe('done');

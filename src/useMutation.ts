@@ -5,7 +5,6 @@ import {
   CommonHookOptions,
   CreateOptions,
   defaultEmptyObject,
-  FetchPolicy,
   IState,
   IStateReducer,
   IVariables,
@@ -92,7 +91,16 @@ export type UseMutation<Mutation> = <TData, TVariables extends IVariables>(
  * Options of useMutation
  */
 export interface MutationOptions<TData, TVariables extends IVariables>
-  extends CommonHookOptions<TData, TVariables> {}
+  extends CommonHookOptions<TData, TVariables> {
+  /**
+   * Shared hook cache id
+   *
+   * In order to be able to update a query data based on this mutation result
+   * you can specify a shared cache id between those hooks which
+   * will update the queries data
+   */
+  sharedCacheId?: string;
+}
 
 /**
  * **useMutation** constructor
@@ -139,8 +147,6 @@ export const createUseMutation = <
 
     const initialMutationClient = useMemo(() => {
       const client = new Client<Mutation>(schema.Mutation, fetchMutation);
-
-      client.cache.rootValue = SharedCache.initialCache(client.cache.rootValue);
 
       return client;
     }, [fetchMutation]);
@@ -190,6 +196,14 @@ export const createUseMutation = <
           stateRef,
         });
 
+        if (optionsRef.current.sharedCacheId) {
+          SharedCache.setCacheData(
+            optionsRef.current.sharedCacheId,
+            dataValue,
+            null
+          );
+        }
+
         return dataValue;
       },
       [fetchMutation]
@@ -210,6 +224,13 @@ export const createUseMutation = <
           refetch: null,
           cacheRefetch: null,
           state: stateRef,
+          setData: (data) => {
+            dispatch({
+              type: 'setData',
+              payload: data,
+              stateRef,
+            });
+          },
         });
       }
       return;
