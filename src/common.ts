@@ -54,7 +54,11 @@ export interface CreateOptions<Schema> {
  */
 export type IVariables = Record<string, unknown>;
 
-export interface CommonHookOptions<TData, TVariables extends IVariables> {
+export interface CommonHookOptions<
+  TData,
+  TVariables extends IVariables,
+  THooksPoolInfo extends DefaultHooksPoolInfo
+> {
   /**
    * Event called on every successful hook call. (except "cache-only" calls)
    *
@@ -63,7 +67,10 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    *
    * (data: Maybe<TData>, hooks: HooksPool) => void
    */
-  onCompleted?: (data: Maybe<TData>, hooks: Readonly<HooksPool>) => void;
+  onCompleted?: (
+    data: Maybe<TData>,
+    hooks: Readonly<HooksPool<THooksPoolInfo>>
+  ) => void;
   /**
    * Event called on GraphQL error on hook call.
    */
@@ -87,7 +94,7 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    * ***Unique*** hook identifier used to add the hook to the ***hooks pool*** received in
    * **onCompleted** event.
    */
-  hookId?: string;
+  hookId?: keyof THooksPoolInfo;
 }
 
 /**
@@ -220,7 +227,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
   optionsRef: {
-    current: CommonHookOptions<TData, TVariables> & {
+    current: CommonHookOptions<TData, TVariables, any> & {
       fetchPolicy?: FetchPolicy;
     };
   };
@@ -331,43 +338,48 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
  *
  * Hooks are added based on **hookId**
  */
-export type HooksPool = Record<string, Hook | undefined>;
+export type HooksPool<HooksInfo extends DefaultHooksPoolInfo> = {
+  [K in keyof HooksInfo]?: Hook<
+    HooksInfo[K]['data'] extends undefined ? unknown : HooksInfo[K]['data'],
+    HooksInfo[K]['variables'] extends IVariables
+      ? HooksInfo[K]['variables']
+      : IVariables
+  >;
+};
+
+export type DefaultHooksPoolInfo = Record<
+  string,
+  {
+    data?: unknown;
+    variables?: IVariables;
+  }
+>;
 
 /**
  * Hook data inside the Hooks Pool
  */
-export interface Hook {
+export interface Hook<TData, TVariables extends IVariables> {
   /**
    * Generic hook callback of the hook
    */
-  callback: <Data = unknown, Variables extends IVariables = IVariables>(args?: {
-    variables?: Variables;
+  callback: (args?: {
+    variables?: TVariables;
     fetchPolicy?: FetchPolicy;
-  }) => Promise<Maybe<Data>>;
+  }) => Promise<Maybe<TData>>;
   /**
    * Hook callback using **cache-and-network** fetchPolicy.
    */
   refetch:
-    | (<Data = unknown, Variables extends IVariables = IVariables>(args?: {
-        variables?: Variables;
-      }) => Promise<Maybe<Data>>)
-    | null;
-  /**
-   * Hook callback using **cache-only** fetchPolicy.
-   */
-  cacheRefetch:
-    | (<Data = unknown, Variables extends IVariables = IVariables>(args?: {
-        variables?: Variables;
-      }) => Promise<Maybe<Data>>)
+    | ((args?: { variables?: TVariables }) => Promise<Maybe<TData>>)
     | null;
   /**
    * Current hook state.
    */
-  state: Readonly<{ current: Readonly<IState<any>> }>;
+  state: Readonly<{ current: Readonly<IState<TData>> }>;
   /**
    * Set hook data
    */
-  setData: (data: any) => void;
+  setData: (data: Maybe<TData>) => void;
 }
 
 function usePreviousDistinct<T>(value: T): T | undefined {
@@ -393,7 +405,7 @@ export const useSubscribeCache = (args: {
   stateRef: {
     current: IState<any>;
   };
-  optionsRef: { current: QueryOptions<any, any> };
+  optionsRef: { current: QueryOptions<any, any, any> };
 }) => {
   const argsRef = useRef(args);
   const { sharedCacheId, stateRef, optionsRef } = (argsRef.current = args);
@@ -510,9 +522,9 @@ export const SharedCache = {
     }
   },
 
-  hooksPool: {} as HooksPool,
+  hooksPool: {} as HooksPool<any>,
 
-  subscribeHookPool: (hookId: string, data: Hook) => {
+  subscribeHookPool: (hookId: string, data: Hook<any, any>) => {
     if (process.env.NODE_ENV !== 'production') {
       if (hookId in SharedCache.hooksPool) {
         console.warn(
