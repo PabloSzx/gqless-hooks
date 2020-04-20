@@ -55,6 +55,9 @@ describe('basic usage and cache', () => {
         {
           sharedCacheId: 'queryhello1',
           hookId: 'queryhello1',
+          onCompleted: (data, hookspool) => {
+            hookspool.queryhello1;
+          },
         }
       );
 
@@ -272,6 +275,9 @@ describe('multiple hooks usage and cache', () => {
           },
           sharedCacheId: 'loremipsumarray',
           hookId: 'query1',
+          onCompleted: (data, hookspool) => {
+            hookspool.query2;
+          },
         }
       );
       const query2 = useQuery(

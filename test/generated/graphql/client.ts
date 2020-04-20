@@ -30,7 +30,15 @@ export const client = new Client<Query>(schema.Query, fetchQuery);
 
 export const query = client.query;
 
-export const useQuery = createUseQuery<Query>({
+export const useQuery = createUseQuery<
+  Query,
+  {
+    queryhello1: string;
+    queryhello2: string;
+    query1: string[];
+    query2: string[];
+  }
+>({
   endpoint,
   schema,
 });
