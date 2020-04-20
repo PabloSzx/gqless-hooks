@@ -14,7 +14,7 @@ import {
   StateReducer,
   useFetchCallback,
   HooksPool,
-  DefaultHooksPoolData,
+  DefaultHooksPoolInfo,
 } from './common';
 
 /**
@@ -39,7 +39,7 @@ type MutationCallback<TData, Mutation, TVariables extends IVariables> = (
 ) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
-  options: MutationOptions<TData, TVariables, DefaultHooksPoolData>
+  options: MutationOptions<TData, TVariables, DefaultHooksPoolInfo>
 ) => {
   const { fetchTimeout = 10000, ...rest } = options;
   return { fetchTimeout, ...rest };
@@ -77,7 +77,7 @@ interface UseMutationState<Mutation, TData> extends IState<TData> {
  */
 export type UseMutation<
   Mutation,
-  THooksPoolData extends DefaultHooksPoolData
+  THooksPoolInfo extends DefaultHooksPoolInfo
 > = <TData, TVariables extends IVariables>(
   /**
    * Mutation function, it should return the data expected from the mutation
@@ -86,7 +86,7 @@ export type UseMutation<
   /**
    * Optional options to give the mutation hook
    */
-  options?: MutationOptions<TData, TVariables, THooksPoolData>
+  options?: MutationOptions<TData, TVariables, THooksPoolInfo>
 ) => [
   MutationCallback<TData, Mutation, TVariables>,
   UseMutationState<Mutation, TData>
@@ -98,8 +98,8 @@ export type UseMutation<
 export interface MutationOptions<
   TData,
   TVariables extends IVariables,
-  THooksPoolData extends DefaultHooksPoolData
-> extends CommonHookOptions<TData, TVariables, THooksPoolData> {
+  THooksPoolInfo extends DefaultHooksPoolInfo
+> extends CommonHookOptions<TData, TVariables, THooksPoolInfo> {
   /**
    * Shared hook cache id
    *
@@ -123,13 +123,13 @@ const lazyInitialState = (): IState<any> => {
  */
 export const createUseMutation = <
   Mutation,
-  THooksPoolData extends DefaultHooksPoolData = DefaultHooksPoolData,
+  THooksPoolInfo extends DefaultHooksPoolInfo = DefaultHooksPoolInfo,
   Schema extends { Mutation: ObjectNode } = { Mutation: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>
-): UseMutation<Mutation, THooksPoolData> => {
+): UseMutation<Mutation, THooksPoolInfo> => {
   const { endpoint, schema, creationHeaders } = createOptions;
-  const useMutation: UseMutation<Mutation, THooksPoolData> = <
+  const useMutation: UseMutation<Mutation, THooksPoolInfo> = <
     TData,
     TVariables extends IVariables
   >(

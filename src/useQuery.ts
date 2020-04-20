@@ -17,7 +17,7 @@ import {
   useFetchCallback,
   useSubscribeCache,
   HooksPool,
-  DefaultHooksPoolData,
+  DefaultHooksPoolInfo,
 } from './common';
 
 /**
@@ -80,7 +80,7 @@ type QueryQuickCallback<TData, TVariables extends IVariables> = (
 ) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
-  options: QueryOptions<TData, TVariables, DefaultHooksPoolData>
+  options: QueryOptions<TData, TVariables, DefaultHooksPoolInfo>
 ) => {
   const {
     lazy = false,
@@ -123,7 +123,7 @@ interface UseQueryHelpers<Query, TData, TVariables extends IVariables> {
 /**
  * **useQuery** hook
  */
-export type UseQuery<Query, THooksPool extends DefaultHooksPoolData> = <
+export type UseQuery<Query, THooksPool extends DefaultHooksPoolInfo> = <
   TData,
   TVariables extends IVariables
 >(
@@ -143,7 +143,7 @@ export type UseQuery<Query, THooksPool extends DefaultHooksPoolData> = <
 export interface QueryOptions<
   TData,
   TVariables extends IVariables,
-  THooksPool extends DefaultHooksPoolData
+  THooksPool extends DefaultHooksPoolInfo
 > extends CommonHookOptions<TData, TVariables, THooksPool> {
   /**
    * Fetch policy used for the query hook.
@@ -177,7 +177,7 @@ export interface QueryOptions<
  */
 export const createUseQuery = <
   Query,
-  THooksPool extends DefaultHooksPoolData = DefaultHooksPoolData,
+  THooksPool extends DefaultHooksPoolInfo = DefaultHooksPoolInfo,
   Schema extends { Query: ObjectNode } = { Query: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>

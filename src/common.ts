@@ -57,7 +57,7 @@ export type IVariables = Record<string, unknown>;
 export interface CommonHookOptions<
   TData,
   TVariables extends IVariables,
-  THooksPoolData extends DefaultHooksPoolData
+  THooksPoolInfo extends DefaultHooksPoolInfo
 > {
   /**
    * Event called on every successful hook call. (except "cache-only" calls)
@@ -69,7 +69,7 @@ export interface CommonHookOptions<
    */
   onCompleted?: (
     data: Maybe<TData>,
-    hooks: Readonly<HooksPool<THooksPoolData>>
+    hooks: Readonly<HooksPool<THooksPoolInfo>>
   ) => void;
   /**
    * Event called on GraphQL error on hook call.
@@ -94,7 +94,7 @@ export interface CommonHookOptions<
    * ***Unique*** hook identifier used to add the hook to the ***hooks pool*** received in
    * **onCompleted** event.
    */
-  hookId?: keyof THooksPoolData;
+  hookId?: keyof THooksPoolInfo;
 }
 
 /**
@@ -338,16 +338,27 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
  *
  * Hooks are added based on **hookId**
  */
-export type HooksPool<Data extends Record<string, unknown>> = {
-  [K in keyof Data]: Hook<Data[K]>;
+export type HooksPool<HooksInfo extends DefaultHooksPoolInfo> = {
+  [K in keyof HooksInfo]?: Hook<
+    HooksInfo[K]['data'] extends undefined ? unknown : HooksInfo[K]['data'],
+    HooksInfo[K]['variables'] extends IVariables
+      ? HooksInfo[K]['variables']
+      : IVariables
+  >;
 };
 
-export type DefaultHooksPoolData = Record<string, unknown>;
+export type DefaultHooksPoolInfo = Record<
+  string,
+  {
+    data?: unknown;
+    variables?: IVariables;
+  }
+>;
 
 /**
  * Hook data inside the Hooks Pool
  */
-export interface Hook<TData, TVariables extends IVariables = IVariables> {
+export interface Hook<TData, TVariables extends IVariables> {
   /**
    * Generic hook callback of the hook
    */
@@ -513,7 +524,7 @@ export const SharedCache = {
 
   hooksPool: {} as HooksPool<any>,
 
-  subscribeHookPool: (hookId: string, data: Hook<any>) => {
+  subscribeHookPool: (hookId: string, data: Hook<any, any>) => {
     if (process.env.NODE_ENV !== 'production') {
       if (hookId in SharedCache.hooksPool) {
         console.warn(

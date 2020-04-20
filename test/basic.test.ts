@@ -55,9 +55,7 @@ describe('basic usage and cache', () => {
         {
           sharedCacheId: 'queryhello1',
           hookId: 'queryhello1',
-          onCompleted: (data, hookspool) => {
-            hookspool.queryhello1;
-          },
+          onCompleted: (data, hookspool) => {},
         }
       );
 
