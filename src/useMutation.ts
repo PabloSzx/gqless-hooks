@@ -102,6 +102,14 @@ export interface MutationOptions<TData, TVariables extends IVariables>
   sharedCacheId?: string;
 }
 
+const lazyInitialState = (): IState<any> => {
+  return {
+    fetchState: 'waiting',
+    called: false,
+    data: undefined,
+  };
+};
+
 /**
  * **useMutation** constructor
  */
@@ -125,11 +133,12 @@ export const createUseMutation = <
     const mutationFnRef = useRef(mutationFn);
     mutationFnRef.current = mutationFn;
 
-    const [state, dispatch] = useReducer<IStateReducer<TData>>(StateReducer, {
-      fetchState: 'waiting',
-      called: false,
-      data: undefined,
-    });
+    const [state, dispatch] = useReducer<IStateReducer<TData>, IState<TData>>(
+      StateReducer,
+      undefined as any,
+      lazyInitialState
+    );
+
     const stateRef = useRef(state);
     stateRef.current = state;
 

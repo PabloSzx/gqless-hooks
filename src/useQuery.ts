@@ -193,20 +193,17 @@ export const createUseQuery = <
     const queryFnRef = useRef(queryFn);
     queryFnRef.current = queryFn;
 
-    const [state, dispatch] = useReducer<IStateReducer<TData>>(
+    const [state, dispatch] = useReducer<IStateReducer<TData>, IState<TData>>(
       StateReducer,
-      lazy
-        ? {
-            fetchState: 'waiting',
-            called: false,
-            data: undefined,
-          }
-        : {
-            fetchState: 'loading',
-            called: true,
-            data: undefined,
-          }
+      undefined as any,
+      () => {
+        if (lazy) {
+          return { fetchState: 'waiting', called: false, data: undefined };
+        }
+        return { fetchState: 'loading', called: true, data: undefined };
+      }
     );
+
     const stateRef = useRef(state);
     stateRef.current = state;
 
