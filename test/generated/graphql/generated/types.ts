@@ -18,6 +18,7 @@ type Extension<TName extends string> = TName extends keyof typeof extensions
 type t_Query = FieldsType<
   {
     __typename: t_String<'Query'>;
+    loremIpsumPagination: t_String[];
     hello: FieldsTypeArg<{ name: string }, t_String>;
     loremIpsum: t_String[];
   },

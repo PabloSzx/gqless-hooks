@@ -110,6 +110,8 @@ const lazyInitialState = (): IState<any> => {
   };
 };
 
+const notifyOnNetworkStatusChangeRef = { current: true };
+
 /**
  * **useMutation** constructor
  */
@@ -152,6 +154,7 @@ export const createUseMutation = <
       creationHeaders,
       optionsRef,
       stateRef,
+      notifyOnNetworkStatusChangeRef,
     });
 
     const initialMutationClient = useMemo(() => {

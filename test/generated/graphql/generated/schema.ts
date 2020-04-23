@@ -15,6 +15,13 @@ export const schema = {
   get Query() {
     return new ObjectNode(
       {
+        get loremIpsumPagination() {
+          return new FieldNode(
+            new ArrayNode(schema.String, false),
+            undefined,
+            false
+          );
+        },
         get hello() {
           return new FieldNode(
             schema.String,

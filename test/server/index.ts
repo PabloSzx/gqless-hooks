@@ -14,15 +14,24 @@ app.use(bodyParser.json());
 
 const loremIpsumArray: string[] = [];
 
+const loremIpsumPaginationArray = new Array(50).fill(0).map(() => {
+  return loremIpsum();
+});
+
 const Query = queryType({
   definition(t) {
+    t.list.string('loremIpsumPagination', {
+      resolve(_root, _args) {
+        return loremIpsumPaginationArray;
+      },
+    });
     t.string('hello', {
       args: { name: stringArg({ nullable: false }) },
-      resolve: (parent, { name }) => `query ${name}!`,
+      resolve: (_root, { name }) => `query ${name}!`,
     });
     t.list.string('loremIpsum', {
       nullable: false,
-      resolve: async () => {
+      async resolve() {
         // await wait(300);
 
         loremIpsumArray.push(loremIpsum());
@@ -37,11 +46,11 @@ const Mutation = mutationType({
   definition(t) {
     t.string('helloMutation', {
       args: { arg1: stringArg({ nullable: false }) },
-      resolve: (parent, { arg1 }) => `mutation ${arg1}`,
+      resolve: (_root, { arg1 }) => `mutation ${arg1}`,
     });
     t.list.string('resetLoremIpsum', {
       nullable: false,
-      resolve: async () => {
+      async resolve() {
         // await wait(200);
 
         loremIpsumArray.splice(0, loremIpsumArray.length);

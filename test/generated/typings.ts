@@ -40,6 +40,7 @@ export interface NexusGenFieldTypes {
   Query: { // field return type
     hello: string; // String!
     loremIpsum: string[]; // [String!]!
+    loremIpsumPagination: string[]; // [String!]!
   }
 }
 

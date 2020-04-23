@@ -244,6 +244,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
     };
   };
   stateRef: { current: IState<TData> };
+  notifyOnNetworkStatusChangeRef: { current: boolean };
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
@@ -270,11 +271,12 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       type = 'query',
       creationHeaders = defaultEmptyObject,
       stateRef,
+      notifyOnNetworkStatusChangeRef: { current: shouldNotifyLoading },
     } = argsRef.current;
 
     effects.onPreEffect?.();
 
-    if (stateRef.current.fetchState !== 'loading') {
+    if (shouldNotifyLoading && stateRef.current.fetchState !== 'loading') {
       dispatch({ type: 'loading', stateRef });
     }
 
@@ -302,27 +304,29 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
     }
 
     if (!response.ok) {
-      let errorPayload: GraphQLError[] | undefined;
+      let errorPayload: GraphQLError[];
+
+      const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
 
       if (Array.isArray(json?.errors)) {
         errorPayload = json.errors;
       } else if (Array.isArray(json)) {
         errorPayload = json;
+      } else {
+        errorPayload = [new GraphQLError(errorText)];
       }
 
-      const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
+      effects.onErrorEffect?.(errorPayload);
 
-      effects.onErrorEffect?.(errorPayload || errorText);
-
-      onError?.(errorPayload || []);
+      onError?.(errorPayload);
 
       dispatch({
         type: 'error',
-        payload: errorPayload || [],
+        payload: errorPayload,
         stateRef,
       });
 
-      throw new Error(errorText);
+      throw Error(errorText);
     }
 
     if (json?.errors) {
