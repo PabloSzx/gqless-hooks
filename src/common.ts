@@ -2,7 +2,7 @@ import 'isomorphic-unfetch';
 
 import { QueryFetcher } from 'gqless';
 import { GraphQLError } from 'graphql';
-import { Dispatch, Reducer, useCallback, useRef, useEffect } from 'react';
+import { Dispatch, Reducer, useCallback, useEffect, useRef } from 'react';
 import { QueryOptions } from 'useQuery';
 
 /**
@@ -31,6 +31,10 @@ export type FetchPolicy =
  */
 export type Maybe<T> = T | null | undefined;
 
+export const NODE_ENV = process.env.NODE_ENV;
+
+export const IS_NOT_PRODUCTION = NODE_ENV !== 'production';
+
 /**
  * Create Options needed for hook instances creation
  */
@@ -54,11 +58,7 @@ export interface CreateOptions<Schema> {
  */
 export type IVariables = Record<string, unknown>;
 
-export interface CommonHookOptions<
-  TData,
-  TVariables extends IVariables,
-  THooksPoolInfo extends DefaultHooksPoolInfo
-> {
+export interface CommonHookOptions<TData, TVariables extends IVariables> {
   /**
    * Event called on every successful hook call. (except "cache-only" calls)
    *
@@ -67,10 +67,7 @@ export interface CommonHookOptions<
    *
    * (data: Maybe<TData>, hooks: HooksPool) => void
    */
-  onCompleted?: (
-    data: Maybe<TData>,
-    hooks: Readonly<HooksPool<THooksPoolInfo>>
-  ) => void;
+  onCompleted?: (data: Maybe<TData>, hooks: Readonly<HooksPool>) => void;
   /**
    * Event called on GraphQL error on hook call.
    */
@@ -93,8 +90,24 @@ export interface CommonHookOptions<
   /**
    * ***Unique*** hook identifier used to add the hook to the ***hooks pool*** received in
    * **onCompleted** event.
+   *
+   * For hooks pool usage you need to specify it's types
+   * using **declare global interface gqlessHooksPool**
+   * anywhere in your application
+   * @example
+   * declare global {
+   *   interface gqlessHooksPool {
+   *     query1: {
+   *       data: string[];
+   *       variables: {
+   *         variable1: number;
+   *       }
+   *     query2: {
+   *       data: string;
+   *     };
+   *   }
    */
-  hookId?: keyof THooksPoolInfo;
+  hookId?: keyof gqlessHooksPool;
 }
 
 /**
@@ -207,12 +220,11 @@ export const StateReducer = <TData>(
   }
 };
 
-export const logDevErrors =
-  process.env.NODE_ENV !== 'production'
-    ? (err: any) => {
-        console.error(err);
-      }
-    : undefined;
+export const logDevErrors = IS_NOT_PRODUCTION
+  ? (err: any) => {
+      console.error(err);
+    }
+  : undefined;
 
 export const defaultEmptyObject = {};
 
@@ -227,7 +239,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   type: 'query' | 'mutation';
   creationHeaders: Headers | undefined;
   optionsRef: {
-    current: CommonHookOptions<TData, TVariables, any> & {
+    current: CommonHookOptions<TData, TVariables> & {
       fetchPolicy?: FetchPolicy;
     };
   };
@@ -333,27 +345,25 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   }, []);
 };
 
+declare global {
+  interface gqlessHooksPool {}
+}
+
 /**
  * Hooks pool of **gqless-hooks**.
  *
  * Hooks are added based on **hookId**
  */
-export type HooksPool<HooksInfo extends DefaultHooksPoolInfo> = {
-  [K in keyof HooksInfo]?: Hook<
-    HooksInfo[K]['data'] extends undefined ? unknown : HooksInfo[K]['data'],
-    HooksInfo[K]['variables'] extends IVariables
-      ? HooksInfo[K]['variables']
+export type HooksPool = {
+  [K in keyof gqlessHooksPool]?: Hook<
+    gqlessHooksPool[K]['data'] extends undefined
+      ? unknown
+      : gqlessHooksPool[K]['data'],
+    gqlessHooksPool[K]['variables'] extends IVariables
+      ? gqlessHooksPool[K]['variables']
       : IVariables
   >;
 };
-
-export type DefaultHooksPoolInfo = Record<
-  string,
-  {
-    data?: unknown;
-    variables?: IVariables;
-  }
->;
 
 /**
  * Hook data inside the Hooks Pool
@@ -369,17 +379,20 @@ export interface Hook<TData, TVariables extends IVariables> {
   /**
    * Hook callback using **cache-and-network** fetchPolicy.
    */
-  refetch:
-    | ((args?: { variables?: TVariables }) => Promise<Maybe<TData>>)
-    | null;
+  refetch: (args?: { variables?: TVariables }) => Promise<Maybe<TData>>;
   /**
    * Current hook state.
    */
   state: Readonly<{ current: Readonly<IState<TData>> }>;
   /**
    * Set hook data
+   *
+   * It can be the new data itself, or a function that receives
+   * the previous data and returns the new data
    */
-  setData: (data: Maybe<TData>) => void;
+  setData: (
+    data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)
+  ) => void;
 }
 
 function usePreviousDistinct<T>(value: T): T | undefined {
@@ -405,7 +418,7 @@ export const useSubscribeCache = (args: {
   stateRef: {
     current: IState<any>;
   };
-  optionsRef: { current: QueryOptions<any, any, any> };
+  optionsRef: { current: QueryOptions<any, any> };
 }) => {
   const argsRef = useRef(args);
   const { sharedCacheId, stateRef, optionsRef } = (argsRef.current = args);
@@ -522,19 +535,25 @@ export const SharedCache = {
     }
   },
 
-  hooksPool: {} as HooksPool<any>,
+  hooksPool: {} as HooksPool,
 
-  subscribeHookPool: (hookId: string, data: Hook<any, any>) => {
-    if (process.env.NODE_ENV !== 'production') {
-      if (hookId in SharedCache.hooksPool) {
-        console.warn(
-          `Duplicated hook id "${hookId}", previous hook overwriten!`
-        );
+  subscribeHookPool: (
+    hookId: string | number | undefined,
+    hook: Hook<any, any>
+  ) => {
+    if (hookId != null) {
+      if (IS_NOT_PRODUCTION) {
+        if (hookId in SharedCache.hooksPool) {
+          console.warn(
+            `Duplicated hook id "${hookId}", previous hook overwriten!`
+          );
+        }
       }
+      (SharedCache.hooksPool as any)[hookId] = hook;
+      return () => {
+        delete (SharedCache.hooksPool as any)[hookId];
+      };
     }
-    SharedCache.hooksPool[hookId] = data;
-    return () => {
-      delete SharedCache.hooksPool[hookId];
-    };
+    return;
   },
 };

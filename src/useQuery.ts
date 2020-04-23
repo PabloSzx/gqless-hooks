@@ -16,8 +16,6 @@ import {
   stringifyIfNeeded,
   useFetchCallback,
   useSubscribeCache,
-  HooksPool,
-  DefaultHooksPoolInfo,
 } from './common';
 
 /**
@@ -80,7 +78,7 @@ type QueryQuickCallback<TData, TVariables extends IVariables> = (
 ) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
-  options: QueryOptions<TData, TVariables, DefaultHooksPoolInfo>
+  options: QueryOptions<TData, TVariables>
 ) => {
   const {
     lazy = false,
@@ -123,10 +121,7 @@ interface UseQueryHelpers<Query, TData, TVariables extends IVariables> {
 /**
  * **useQuery** hook
  */
-export type UseQuery<Query, THooksPool extends DefaultHooksPoolInfo> = <
-  TData,
-  TVariables extends IVariables
->(
+export type UseQuery<Query> = <TData, TVariables extends IVariables>(
   /**
    * Query function, it should return the data expected from the mutation
    */
@@ -134,17 +129,14 @@ export type UseQuery<Query, THooksPool extends DefaultHooksPoolInfo> = <
   /**
    * Optional options to give the query hook
    */
-  options?: QueryOptions<TData, TVariables, THooksPool>
+  options?: QueryOptions<TData, TVariables>
 ) => [IState<TData>, UseQueryHelpers<Query, TData, TVariables>];
 
 /**
  * Options of useQuery
  */
-export interface QueryOptions<
-  TData,
-  TVariables extends IVariables,
-  THooksPool extends DefaultHooksPoolInfo
-> extends CommonHookOptions<TData, TVariables, THooksPool> {
+export interface QueryOptions<TData, TVariables extends IVariables>
+  extends CommonHookOptions<TData, TVariables> {
   /**
    * Fetch policy used for the query hook.
    *
@@ -177,15 +169,14 @@ export interface QueryOptions<
  */
 export const createUseQuery = <
   Query,
-  THooksPool extends DefaultHooksPoolInfo = DefaultHooksPoolInfo,
   Schema extends { Query: ObjectNode } = { Query: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>
-): UseQuery<Query, THooksPool> => {
+): UseQuery<Query> => {
   const { endpoint, schema, creationHeaders } = createOptions;
-  const useQuery: UseQuery<Query, any> = <TData, TVariables extends IVariables>(
+  const useQuery: UseQuery<Query> = <TData, TVariables extends IVariables>(
     queryFn: QueryFn<Query, TData, TVariables>,
-    options: QueryOptions<TData, TVariables, any> = defaultEmptyObject
+    options: QueryOptions<TData, TVariables> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
     const {
@@ -470,28 +461,29 @@ export const createUseQuery = <
     }, []);
 
     useEffect(() => {
-      if (hookId) {
+      if (hookId != null) {
         return SharedCache.subscribeHookPool(hookId, {
           callback: async (args) => {
             const variables = args?.variables as TVariables | undefined;
             const fetchPolicy = args?.fetchPolicy;
-            return (await queryCallbackRef.current({
+            return await queryCallbackRef.current({
               variables,
               fetchPolicy,
-            })) as any;
+            });
           },
           refetch: async (args) => {
             const variables = args?.variables as TVariables | undefined;
-            return (await queryCallbackRef.current({
+            return await queryCallbackRef.current({
               variables,
               fetchPolicy: 'cache-and-network',
-            })) as any;
+            });
           },
           state: stateRef,
           setData: (data) => {
             dispatch({
               type: 'setData',
-              payload: data,
+              payload:
+                typeof data === 'function' ? data(stateRef.current.data) : data,
               stateRef,
             });
           },

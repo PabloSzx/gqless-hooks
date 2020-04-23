@@ -36,6 +36,23 @@ const renderCount = () => {
   };
 };
 
+declare global {
+  interface gqlessHooksPool {
+    queryhello1: {
+      data: string;
+    };
+    queryhello2: {
+      data: string;
+    };
+    query1: {
+      data: string[];
+    };
+    query2: {
+      data: string[];
+    };
+  }
+}
+
 describe('basic usage and cache', () => {
   test('query works and minimizes renders calls', async () => {
     const nRenderFirst = renderCount();
@@ -55,6 +72,7 @@ describe('basic usage and cache', () => {
         {
           sharedCacheId: 'queryhello1',
           hookId: 'queryhello1',
+
           onCompleted: (data, hookspool) => {},
         }
       );

@@ -1,9 +1,12 @@
-import express from 'express';
-import { resolve } from 'path';
-import { queryType, stringArg, makeSchema, mutationType } from '@nexus/schema';
 import bodyParser from 'body-parser';
+import { NODE_ENV } from 'common';
+import express from 'express';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
+import { resolve } from 'path';
+
+import { makeSchema, mutationType, queryType, stringArg } from '@nexus/schema';
+
 const app = express();
 
 app.use(bodyParser.json());
@@ -82,7 +85,7 @@ const maxTimeoutClose = 10000;
 let timeoutClose: NodeJS.Timeout;
 
 const server = app.listen(listeningPort, (err) => {
-  if (!err && process.env.NODE_ENV !== 'test') {
+  if (!err && NODE_ENV !== 'test') {
     console.log(`gql server listening on port ${listeningPort}`);
   }
 

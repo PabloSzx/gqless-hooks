@@ -13,8 +13,6 @@ import {
   SharedCache,
   StateReducer,
   useFetchCallback,
-  HooksPool,
-  DefaultHooksPoolInfo,
 } from './common';
 
 /**
@@ -39,7 +37,7 @@ type MutationCallback<TData, Mutation, TVariables extends IVariables> = (
 ) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
-  options: MutationOptions<TData, TVariables, DefaultHooksPoolInfo>
+  options: MutationOptions<TData, TVariables>
 ) => {
   const { fetchTimeout = 10000, ...rest } = options;
   return { fetchTimeout, ...rest };
@@ -75,10 +73,7 @@ interface UseMutationState<Mutation, TData> extends IState<TData> {
 /**
  * **useMutation** hook
  */
-export type UseMutation<
-  Mutation,
-  THooksPoolInfo extends DefaultHooksPoolInfo
-> = <TData, TVariables extends IVariables>(
+export type UseMutation<Mutation> = <TData, TVariables extends IVariables>(
   /**
    * Mutation function, it should return the data expected from the mutation
    */
@@ -86,7 +81,7 @@ export type UseMutation<
   /**
    * Optional options to give the mutation hook
    */
-  options?: MutationOptions<TData, TVariables, THooksPoolInfo>
+  options?: MutationOptions<TData, TVariables>
 ) => [
   MutationCallback<TData, Mutation, TVariables>,
   UseMutationState<Mutation, TData>
@@ -95,11 +90,8 @@ export type UseMutation<
 /**
  * Options of useMutation
  */
-export interface MutationOptions<
-  TData,
-  TVariables extends IVariables,
-  THooksPoolInfo extends DefaultHooksPoolInfo
-> extends CommonHookOptions<TData, TVariables, THooksPoolInfo> {
+export interface MutationOptions<TData, TVariables extends IVariables>
+  extends CommonHookOptions<TData, TVariables> {
   /**
    * Shared hook cache id
    *
@@ -123,18 +115,17 @@ const lazyInitialState = (): IState<any> => {
  */
 export const createUseMutation = <
   Mutation,
-  THooksPoolInfo extends DefaultHooksPoolInfo = DefaultHooksPoolInfo,
   Schema extends { Mutation: ObjectNode } = { Mutation: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>
-): UseMutation<Mutation, THooksPoolInfo> => {
+): UseMutation<Mutation> => {
   const { endpoint, schema, creationHeaders } = createOptions;
-  const useMutation: UseMutation<Mutation, THooksPoolInfo> = <
+  const useMutation: UseMutation<Mutation> = <
     TData,
     TVariables extends IVariables
   >(
     mutationFn: MutationFn<TData, Mutation, TVariables>,
-    options: MutationOptions<TData, TVariables, any> = defaultEmptyObject
+    options: MutationOptions<TData, TVariables> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
     const { hookId } = (optionsRef.current = defaultOptions(options));
@@ -230,21 +221,28 @@ export const createUseMutation = <
     mutationCallbackRef.current = mutationCallback;
 
     useEffect(() => {
-      if (hookId) {
+      if (hookId != null) {
         return SharedCache.subscribeHookPool(hookId, {
           callback: async (args) => {
             const variables = args?.variables as TVariables | undefined;
 
-            return (await mutationCallbackRef.current({
+            return await mutationCallbackRef.current({
               variables,
-            })) as any;
+            });
           },
-          refetch: null,
+          refetch: async (args) => {
+            const variables = args?.variables as TVariables | undefined;
+
+            return await mutationCallbackRef.current({
+              variables,
+            });
+          },
           state: stateRef,
           setData: (data) => {
             dispatch({
               type: 'setData',
-              payload: data,
+              payload:
+                typeof data === 'function' ? data(stateRef.current.data) : data,
               stateRef,
             });
           },
