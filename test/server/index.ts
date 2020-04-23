@@ -1,11 +1,12 @@
 import bodyParser from 'body-parser';
-import { NODE_ENV } from 'common';
 import express from 'express';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
 import { resolve } from 'path';
 
 import { makeSchema, mutationType, queryType, stringArg } from '@nexus/schema';
+
+import { NODE_ENV } from '../../src/common';
 
 const app = express();
 

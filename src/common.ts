@@ -349,6 +349,9 @@ declare global {
   interface gqlessHooksPool {}
 }
 
+type gqlessHookVariableTemplate = { variables: IVariables };
+type gqlessHookDataTemplate = { data: unknown };
+
 /**
  * Hooks pool of **gqless-hooks**.
  *
@@ -356,10 +359,10 @@ declare global {
  */
 export type HooksPool = {
   [K in keyof gqlessHooksPool]?: Hook<
-    gqlessHooksPool[K]['data'] extends undefined
-      ? unknown
-      : gqlessHooksPool[K]['data'],
-    gqlessHooksPool[K]['variables'] extends IVariables
+    gqlessHooksPool[K] extends gqlessHookDataTemplate
+      ? gqlessHooksPool[K]['data']
+      : unknown,
+    gqlessHooksPool[K] extends gqlessHookVariableTemplate
       ? gqlessHooksPool[K]['variables']
       : IVariables
   >;
