@@ -128,7 +128,7 @@
 					<div class="tsd-signature tsd-kind-icon">fetch<wbr>Policy<span class="tsd-signature-symbol">:</span> <a href="../modules/_common_.html#fetchpolicy" class="tsd-signature-type">FetchPolicy</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/useQuery.ts#L146">useQuery.ts:146</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L146">useQuery.ts:146</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -146,7 +146,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#fetchtimeout">fetchTimeout</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L74">common.ts:74</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L78">common.ts:78</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -162,7 +162,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#headers">headers</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L78">common.ts:78</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L82">common.ts:82</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -174,11 +174,11 @@
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
 					<a name="hookid" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> hook<wbr>Id</h3>
-					<div class="tsd-signature tsd-kind-icon">hook<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
+					<div class="tsd-signature tsd-kind-icon">hook<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">keyof </span><span class="tsd-signature-type">gqlessHooksPool</span></div>
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#hookid">hookId</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L90">common.ts:90</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L110">common.ts:110</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -186,6 +186,24 @@
 							<p><strong><em>Unique</em></strong> hook identifier used to add the hook to the <strong><em>hooks pool</em></strong> received in
 							<strong>onCompleted</strong> event.</p>
 						</div>
+						<p>For hooks pool usage you need to specify it&#39;s types
+							using <strong>declare global interface gqlessHooksPool</strong>
+						anywhere in your application</p>
+						<dl class="tsd-comment-tags">
+							<dt>example</dt>
+							<dd><p>declare global {
+									interface gqlessHooksPool {
+									query1: {
+									data: string[];
+									variables: {
+									variable1: number;
+									}
+									query2: {
+									data: string;
+									};
+								}</p>
+							</dd>
+						</dl>
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
@@ -194,7 +212,7 @@
 					<div class="tsd-signature tsd-kind-icon">lazy<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/useQuery.ts#L152">useQuery.ts:152</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L152">useQuery.ts:152</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -211,7 +229,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#oncompleted">onCompleted</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L66">common.ts:66</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L70">common.ts:70</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -230,7 +248,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#onerror">onError</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L70">common.ts:70</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L74">common.ts:74</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -245,7 +263,7 @@
 					<div class="tsd-signature tsd-kind-icon">poll<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/useQuery.ts#L156">useQuery.ts:156</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L156">useQuery.ts:156</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -260,7 +278,7 @@
 					<div class="tsd-signature tsd-kind-icon">shared<wbr>Cache<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/useQuery.ts#L164">useQuery.ts:164</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L164">useQuery.ts:164</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -279,7 +297,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#variables">variables</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/f9df320/src/common.ts#L85">common.ts:85</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/common.ts#L89">common.ts:89</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -392,7 +410,6 @@
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
-				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
 				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
 				<li class="tsd-kind-property tsd-parent-kind-interface"><span class="tsd-kind-icon">Property</span></li>
 			</ul>
