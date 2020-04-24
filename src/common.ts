@@ -170,6 +170,10 @@ export const StateReducer = <TData>(
   reducerState: IState<TData>,
   action: IDispatch<TData>
 ): IState<TData> => {
+  if (!action.stateRef.current.called) {
+    action.stateRef.current.called = true;
+  }
+
   switch (action.type) {
     case 'done': {
       if (reducerState.fetchState === 'error') {
@@ -178,7 +182,11 @@ export const StateReducer = <TData>(
           stringifyIfNeeded(reducerState.data)
         ) {
           action.stateRef.current.data = action.payload;
-          return { ...reducerState, data: action.payload };
+
+          const newState = { ...reducerState };
+          newState.data = action.payload;
+
+          return newState;
         }
         return reducerState;
       }
@@ -186,35 +194,38 @@ export const StateReducer = <TData>(
       action.stateRef.current.data = action.payload;
 
       return {
-        called: true,
         fetchState: 'done',
         data: action.payload,
+        called: true,
       };
     }
     case 'loading': {
       action.stateRef.current.fetchState = 'loading';
 
       return {
-        called: true,
         fetchState: 'loading',
         data: reducerState.data,
+        called: true,
       };
     }
     case 'error': {
       action.stateRef.current.fetchState = 'error';
+      action.stateRef.current.errors = action.payload;
+
       return {
-        called: true,
         fetchState: 'error',
         data: reducerState.data,
+        called: true,
         errors: action.payload,
       };
     }
     case 'setData': {
       action.stateRef.current.data = action.payload;
-      return {
-        ...reducerState,
-        data: action.payload,
-      };
+
+      const newState = { ...reducerState };
+      newState.data = action.payload;
+
+      return newState;
     }
   }
 };
