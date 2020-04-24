@@ -18,7 +18,17 @@ export const schema = {
         get loremIpsumPagination() {
           return new FieldNode(
             new ArrayNode(schema.String, false),
-            undefined,
+            new Arguments(
+              {
+                get limit() {
+                  return new ArgumentsField(schema.Int, false);
+                },
+                get skip() {
+                  return new ArgumentsField(schema.Int, false);
+                },
+              },
+              true
+            ),
             false
           );
         },
@@ -46,6 +56,12 @@ export const schema = {
       },
       { name: 'Query', extension: ((extensions as any) || {}).Query }
     );
+  },
+  get Int() {
+    return new ScalarNode({
+      name: 'Int',
+      extension: ((extensions as any) || {}).Int,
+    });
   },
   get String() {
     return new ScalarNode({

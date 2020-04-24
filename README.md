@@ -89,10 +89,12 @@ const Component = () => {
 
 ## Features
 
-- Shared global cache using policies.
+- Cache policies, somewhat following [Apollo fetchPolicy](https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy)
+- Shared global cache.
 - Polling
 - Automatic refetch on variables change
-- Shared hooks pool through unique identifiers, available via **onCompleted** event on every hook.
+- Shared hooks pool through unique identifiers (_hookId_ hook option), available via **onCompleted** and **fetchMore** event on every hook.
+- Support for **Pagination** with a **fetchMore** callback.
 
 ## Docs and API Reference
 
@@ -142,14 +144,224 @@ useQuery(
 );
 ```
 
+### Headers
+
+You can set headers to be added to every fetch call
+
+```ts
+export const useQuery = createUseQuery<Query>({
+  schema,
+  endpoint,
+  creationHeaders: {
+    authorization: '...',
+  },
+});
+```
+
+or individually
+
+```ts
+//useMutation((schema) => {
+useQuery(
+  (schema) => {
+    //...
+  },
+  {
+    //...
+    headers: {
+      authorization: '...',
+    },
+  }
+);
+```
+
+### Polling
+
+You can set a polling interval in milliseconds
+
+```ts
+useQuery(
+  (schema) => {
+    //...
+  },
+  {
+    //...
+    pollInterval: 100,
+  }
+);
+```
+
+### Shared cache
+
+You can specify that some hooks actually refer to the same data, and for that you can specify a **_sharedCacheId_** that will automatically synchronize the hooks data.
+
+> _Be careful and make sure the synchronized hooks share the same data type signature_
+
+```ts
+// useMutation((schema) => {
+useQuery(
+  (schema) => {
+    //...
+  },
+  {
+    //...
+    sharedCacheId: 'hook1',
+  }
+);
+
+// another component
+
+// useMutation((schema) => {
+useQuery(
+  (schema) => {
+    //...
+  },
+  {
+    // You could also specify the cache-only fetchPolicy
+    // To optimize the hook and prevent unwanted
+    // network fetches.
+    fetchPolicy: 'cache-only',
+    //...
+    sharedCacheId: 'hook1',
+  }
+);
+```
+
+### Hooks pool
+
+You can also synchronize different hooks manually using the **gqless "_HooksPool_"**, available through **onCompleted** and **fetchMore "updateCache"** function.
+
+Since this functionality needs more type-safety to work more safely you will need to use some **type augmentation**.
+
+For example, in any file in your project:
+
+```ts
+// You also could use the same generated types from gqless
+declare global {
+  interface gqlessHooksPool {
+    query1: {
+      data: string[];
+      variables: {
+        variable1: number;
+      };
+      query2: {
+        data: string;
+      };
+    };
+  }
+}
+```
+
+Then you can use it
+
+```ts
+const [, { fetchMore }] = useQuery(
+  (schema) => {
+    //...
+  },
+  {
+    hookId: 'query1',
+    onCompleted(data, hooksPool) {
+      /**
+       * hooksPool ===
+       * {
+       *    query1?: {
+       *      callback: ({ variables, fetchPolicy }) => Promise<Maybe<TData>>,
+       *      refetch: ({ variables }) => Promise<Maybe<TData>>,
+       *      state: { current: { fetchState, data, error, called } },
+       *      setData: (data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)) => void
+       *    },
+       *    query2?: {
+       *      callback: ({ variables, fetchPolicy }) => Promise<Maybe<TData>>,
+       *      refetch: ({ variables }) => Promise<Maybe<TData>>,
+       *      state: { current: { fetchState, data, error, called } },
+       *      setData: (data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)) => void
+       *    }
+       * }
+       */
+    },
+  }
+);
+
+// ...
+
+fetchMore({
+  variables: {
+    //...
+  },
+  updateCache(previousData, resultData, hooksPool) {
+    // hooksPool is the same as onCompleted above
+    return [...previousData, ...resultData];
+  },
+});
+```
+
+### Pagination
+
+For pagination you can use **fetchMore** from **useQuery**, somewhat following [Apollo fetchMore](https://www.apollographql.com/docs/react/data/pagination/#using-fetchmore) API.
+
+```ts
+const [{ data }, { fetchMore }] = useQuery(
+  (schema, { skip, limit }) => {
+    const {
+      nodes,
+      pageInfo: { hasNext },
+    } = schema.feed({
+      skip,
+      limit,
+    });
+
+    return {
+      nodes: nodes.map(({ _id, title }) => {
+        return {
+          _id,
+          title,
+        };
+      }),
+      pageInfo: {
+        hasNext,
+      },
+    };
+  },
+  {
+    variables: {
+      skip: 0,
+      limit: 5,
+    },
+  }
+);
+
+// ...
+if (data?.hasNext) {
+  const newData = await fetchMore({
+    variables: {
+      skip: data.length,
+    },
+    updateQuery(previousResult, newResult) {
+      if (!newResult) return previousResult;
+
+      // Here you are handling the raw data, not "accessors"
+      return {
+        pageInfo: newResult.pageInfo,
+        nodes: [...(previousResult?.nodes ?? []), ...newResult.nodes],
+      };
+    },
+  });
+}
+```
+
 ## About it
 
-These hooks are a proof of concept that ended up working and is a good workaround until **React Suspense** is officially released (with **good SSR support**) and [Mutation are officially supported by gqless](https://github.com/samdenty/gqless/issues/51).
+These hooks are a proof of concept that ended up working and is a good workaround until **React Suspense** is officially released (with **good SSR support**), along with the lack of functionality out of the box of the official gqless API, and of course, [Mutation is officially supported by gqless](https://github.com/samdenty/gqless/issues/51).
 
-If you are only using these hooks and not the default **query** from gqless, you **don't need to use the graphql HOC**.
+If you are only using these hooks and not the default **query** from gqless, you **don't need to use the graphql HOC**, and it means **less** bundle size.
 
 ## Future
 
 - Add more examples of usage
+- Suspense support
 - Add support for Subscriptions
-- Add support for Pagination with a **fetchMore**-alike (since gqless doesn't have planned support for it for the foreseeable future)
+
+## Contributing
+
+Everyone is more than welcome to help in this project, there is a lot of work still to do to improve this library, but I hope it's useful, as it has been while I personally use it for some of my new web development projects.

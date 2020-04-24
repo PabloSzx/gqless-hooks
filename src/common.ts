@@ -89,23 +89,25 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
   variables?: TVariables;
   /**
    * ***Unique*** hook identifier used to add the hook to the ***hooks pool*** received in
-   * **onCompleted** event.
+   * **onCompleted** event and **fetchMore**.
    *
    * For hooks pool usage you need to specify it's types
    * using **declare global interface gqlessHooksPool**
    * anywhere in your application
    * @example
    * declare global {
-   *   interface gqlessHooksPool {
+   *    interface gqlessHooksPool {
    *     query1: {
    *       data: string[];
    *       variables: {
    *         variable1: number;
-   *       }
-   *     query2: {
-   *       data: string;
+   *       };
+   *       query2: {
+   *         data: string;
+   *       };
    *     };
    *   }
+   * }
    */
   hookId?: keyof gqlessHooksPool;
 }

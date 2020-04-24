@@ -8,7 +8,12 @@ import {
 } from '@testing-library/react-hooks';
 
 import { useMutation, useQuery } from './generated/graphql/client';
-import { close, isClosed, isListening } from './server';
+import {
+  close,
+  isClosed,
+  isListening,
+  loremIpsumPaginationArray,
+} from './server';
 
 afterEach(async () => {
   await cleanupHooks();
@@ -372,4 +377,86 @@ describe('multiple hooks usage and cache', () => {
       }, 500);
     });
   }, 10000);
+});
+
+describe('pagination', () => {
+  it('fetchMore works as intended', async () => {
+    const { result } = renderHook(() => {
+      return useQuery(
+        ({ loremIpsumPagination }, { skip, limit }) => {
+          return loremIpsumPagination({ skip, limit }).map((v) => v);
+        },
+        {
+          onCompleted(data) {},
+          variables: {
+            limit: 5,
+            skip: 0,
+          },
+        }
+      );
+    });
+
+    expect(result.current[0].fetchState).toBe('loading');
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(result.current[0].fetchState).toBe('done');
+      });
+    });
+
+    const first5 = result.current[0].data;
+    expect(first5).toEqual(loremIpsumPaginationArray.slice(0, 5));
+    expect(first5).toHaveLength(5);
+
+    let newData: typeof first5;
+
+    await act(async () => {
+      const dataPromise = result.current[1].fetchMore({
+        variables: {
+          skip: 2,
+        },
+        updateQuery(previousResult, fetchMoreResult) {
+          return fetchMoreResult || previousResult;
+        },
+      });
+      await waitForExpect(() => {
+        expect(result.current[0].fetchState).toBe('loading');
+      });
+      newData = await dataPromise;
+    });
+
+    expect(result.current[0].fetchState).toBe('done');
+
+    expect(first5?.slice(2)).toEqual(newData?.slice(0, newData?.length - 2));
+
+    expect(result.current[0].data).toBe(newData);
+
+    await act(async () => {
+      const dataPromise = result.current[1].fetchMore({
+        variables: {
+          skip: first5?.length,
+          limit: 40,
+        },
+        updateQuery(previousResult, fetchMoreResult) {
+          return Array.from(new Set([...previousResult, ...fetchMoreResult]));
+        },
+        notifyLoading: false,
+      });
+
+      expect(result.current[0].data).toHaveLength(5);
+
+      const fetchStateIsAlwaysDoneInterval = setInterval(() => {
+        expect(result.current[0].fetchState).toBe('done');
+      }, 5);
+
+      await dataPromise;
+
+      expect(result.current[0].data).toHaveLength(43);
+      expect(result.current[0].data).toEqual(
+        loremIpsumPaginationArray.slice(2, 45)
+      );
+      expect(result.current[0].fetchState).toBe('done');
+      clearInterval(fetchStateIsAlwaysDoneInterval);
+    });
+  });
 });

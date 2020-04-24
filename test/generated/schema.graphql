@@ -10,5 +10,5 @@ type Mutation {
 type Query {
   hello(name: String!): String!
   loremIpsum: [String!]!
-  loremIpsumPagination: [String!]!
+  loremIpsumPagination(limit: Int!, skip: Int!): [String!]!
 }

@@ -105,23 +105,53 @@ const defaultOptions = <TData, TVariables extends IVariables>(
   };
 };
 
+/**
+ * fetchMore pagination function
+ *
+ * You should specify a subset of the hooks variables
+ * which will merge with the specified in the hook options
+ * and a **updateQuery** function that should return the new data
+ * hopefully merged with the previous data.
+ *
+ * It returns a promise of the resulting merged data and updates
+ * the hook data
+ */
 type FetchMoreCallback<
   TData,
   TVariables extends IVariables
 > = (fetchMoreOptions: {
+  /**
+   * Subset of the original variables of the query
+   */
   variables: Partial<TVariables>;
+  /**
+   * Function that receives the previous data,
+   * the result of the query just fetched.
+   *
+   * It should return the new data merged with the
+   * previous data.
+   */
   updateQuery: (
+    /**
+     * Previous hook data
+     */
     previousResult: Maybe<TData>,
+    /**
+     * Resulting new data
+     */
     fetchMoreResult: Maybe<TData>,
+    /**
+     * Hooks Pool
+     */
     hooksPool: HooksPool
-  ) => TData | Promise<TData>;
+  ) => Maybe<TData> | Promise<Maybe<TData>>;
   /**
    * Whether the hook should re-render when the network is calling fetchMore
    *
    * The default value is the same already used for **notifyOnNetworkStatusChange**
    */
   notifyLoading?: boolean;
-}) => Promise<void>;
+}) => Promise<Maybe<TData>>;
 
 /**
  * **useQuery** helpers returned from hook
@@ -140,7 +170,7 @@ interface UseQueryHelpers<Query, TData, TVariables extends IVariables> {
    */
   fetchMore: FetchMoreCallback<TData, TVariables>;
   /**
-   * *Vanilla* **gqless** Client query.
+   * *Vanilla* **gqless** Client "*query*".
    */
   query: Query;
 }
@@ -191,7 +221,9 @@ export interface QueryOptions<TData, TVariables extends IVariables>
   sharedCacheId?: string;
   /**
    * Whether the hook should re-render when it's fetching after a refetch
+   * and change it's **fetchState** to **_"loading"_**
    *
+   * **By default it's set to true**
    */
   notifyOnNetworkStatusChange?: boolean;
 }
@@ -389,8 +421,9 @@ export const createUseQuery = <
               !lazyCacheAndNetworkFoundCache
             ) {
               if (
+                shouldDispatchData &&
                 stringifyIfNeeded(stateRef.current.data) !==
-                stringifyIfNeeded(dataValue)
+                  stringifyIfNeeded(dataValue)
               ) {
                 dispatch({
                   type: 'setData',
@@ -421,11 +454,13 @@ export const createUseQuery = <
             dataValue = query(client.query, variables);
           }
 
-          dispatch({
-            type: 'done',
-            payload: dataValue,
-            stateRef,
-          });
+          if (shouldDispatchData) {
+            dispatch({
+              type: 'done',
+              payload: dataValue,
+              stateRef,
+            });
+          }
 
           if (optionsRef.current.sharedCacheId) {
             SharedCache.setCacheData(
@@ -547,7 +582,7 @@ export const createUseQuery = <
           stateRef.current.called = true;
           const fetchMoreResult = await queryCallbackRef.current({
             variables,
-            fetchPolicy: 'cache-and-network',
+            fetchPolicy: 'cache-first',
             shouldDispatchData: false,
           });
           isFetchingRef.current = false;
@@ -556,15 +591,23 @@ export const createUseQuery = <
             notifyOnNetworkStatusChangeRef.current = previousNotifyStatus;
           }
 
-          dispatch({
-            type: 'done',
-            payload: await updateQuery(
-              stateRef.current.data,
-              fetchMoreResult,
-              SharedCache.hooksPool
-            ),
-            stateRef,
-          });
+          const data = await updateQuery(
+            stateRef.current.data,
+            fetchMoreResult,
+            SharedCache.hooksPool
+          );
+
+          if (
+            stringifyIfNeeded(data) !== stringifyIfNeeded(stateRef.current.data)
+          ) {
+            dispatch({
+              type: 'done',
+              payload: data,
+              stateRef,
+            });
+          }
+
+          return data;
         },
         refetch: (args) => {
           return queryCallbackRef.current({

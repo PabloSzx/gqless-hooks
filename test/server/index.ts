@@ -3,8 +3,15 @@ import express from 'express';
 import { createGraphqlMiddleware } from 'express-gql';
 import { loremIpsum } from 'lorem-ipsum';
 import { resolve } from 'path';
+import wait from 'waait';
 
-import { makeSchema, mutationType, queryType, stringArg } from '@nexus/schema';
+import {
+  makeSchema,
+  mutationType,
+  queryType,
+  stringArg,
+  arg,
+} from '@nexus/schema';
 
 import { NODE_ENV } from '../../src/common';
 
@@ -14,15 +21,30 @@ app.use(bodyParser.json());
 
 const loremIpsumArray: string[] = [];
 
-const loremIpsumPaginationArray = new Array(50).fill(0).map(() => {
+export const loremIpsumPaginationArray = new Array(50).fill(0).map(() => {
   return loremIpsum();
 });
+
+const randomDelay = async () => {
+  await wait(Math.round(Math.random() * 300) + 50);
+};
 
 const Query = queryType({
   definition(t) {
     t.list.string('loremIpsumPagination', {
-      resolve(_root, _args) {
-        return loremIpsumPaginationArray;
+      args: {
+        limit: arg({
+          type: 'Int',
+          required: true,
+        }),
+        skip: arg({
+          type: 'Int',
+          required: true,
+        }),
+      },
+      async resolve(_root, { skip, limit }) {
+        await randomDelay();
+        return loremIpsumPaginationArray.slice(skip).slice(0, limit);
       },
     });
     t.string('hello', {
@@ -32,7 +54,7 @@ const Query = queryType({
     t.list.string('loremIpsum', {
       nullable: false,
       async resolve() {
-        // await wait(300);
+        await randomDelay();
 
         loremIpsumArray.push(loremIpsum());
 

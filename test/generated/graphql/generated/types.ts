@@ -18,12 +18,21 @@ type Extension<TName extends string> = TName extends keyof typeof extensions
 type t_Query = FieldsType<
   {
     __typename: t_String<'Query'>;
-    loremIpsumPagination: t_String[];
+    loremIpsumPagination: FieldsTypeArg<
+      { limit: number; skip: number },
+      t_String[]
+    >;
     hello: FieldsTypeArg<{ name: string }, t_String>;
     loremIpsum: t_String[];
   },
   Extension<'Query'>
 >;
+
+/**
+ * @name Int
+ * @type SCALAR
+ */
+type t_Int<T extends number = number> = ScalarType<T, Extension<'Int'>>;
 
 /**
  * @name String
@@ -227,6 +236,12 @@ type t___DirectiveLocation = EnumType<
  * @type OBJECT
  */
 export type Query = TypeData<t_Query>;
+
+/**
+ * @name Int
+ * @type SCALAR
+ */
+export type Int = TypeData<t_Int>;
 
 /**
  * @name String

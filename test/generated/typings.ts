@@ -54,6 +54,10 @@ export interface NexusGenArgTypes {
     hello: { // args
       name: string; // String!
     }
+    loremIpsumPagination: { // args
+      limit: number; // Int!
+      skip: number; // Int!
+    }
   }
 }
 
