@@ -144,10 +144,12 @@ npm install gqless-hooks</code></pre>
 					<h2>Features</h2>
 				</a>
 				<ul>
-					<li>Shared global cache using policies.</li>
+					<li>Cache policies, somewhat following <a href="https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy">Apollo fetchPolicy</a></li>
+					<li>Shared global cache.</li>
 					<li>Polling</li>
 					<li>Automatic refetch on variables change</li>
-					<li>Shared hooks pool through unique identifiers, available via <strong>onCompleted</strong> event on every hook.</li>
+					<li>Shared hooks pool through unique identifiers (<em>hookId</em> hook option), available via <strong>onCompleted</strong> and <strong>fetchMore</strong> event on every hook.</li>
+					<li>Support for <strong>Pagination</strong> with a <strong>fetchMore</strong> callback.</li>
 				</ul>
 				<a href="#docs-and-api-reference" id="docs-and-api-reference" style="color: inherit; text-decoration: none;">
 					<h2>Docs and API Reference</h2>
@@ -193,19 +195,205 @@ useQuery(
     },
   }
 );</code></pre>
+				<a href="#headers" id="headers" style="color: inherit; text-decoration: none;">
+					<h3>Headers</h3>
+				</a>
+				<p>You can set headers to be added to every fetch call</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> useQuery = createUseQuery&lt;Query&gt;({
+  schema,
+  endpoint,
+  creationHeaders: {
+    authorization: <span class="hljs-string">'...'</span>,
+  },
+});</code></pre>
+				<p>or individually</p>
+				<pre><code class="language-ts"><span class="hljs-comment">//useMutation((schema) =&gt; {</span>
+useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">//...</span>
+  },
+  {
+    <span class="hljs-comment">//...</span>
+    headers: {
+      authorization: <span class="hljs-string">'...'</span>,
+    },
+  }
+);</code></pre>
+				<a href="#polling" id="polling" style="color: inherit; text-decoration: none;">
+					<h3>Polling</h3>
+				</a>
+				<p>You can set a polling interval in milliseconds</p>
+				<pre><code class="language-ts">useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">//...</span>
+  },
+  {
+    <span class="hljs-comment">//...</span>
+    pollInterval: <span class="hljs-number">100</span>,
+  }
+);</code></pre>
+				<a href="#shared-cache" id="shared-cache" style="color: inherit; text-decoration: none;">
+					<h3>Shared cache</h3>
+				</a>
+				<p>You can specify that some hooks actually refer to the same data, and for that you can specify a <strong><em>sharedCacheId</em></strong> that will automatically synchronize the hooks data.</p>
+				<blockquote>
+					<p><em>Be careful and make sure the synchronized hooks share the same data type signature</em></p>
+				</blockquote>
+				<pre><code class="language-ts"><span class="hljs-comment">// useMutation((schema) =&gt; {</span>
+useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">//...</span>
+  },
+  {
+    <span class="hljs-comment">//...</span>
+    sharedCacheId: <span class="hljs-string">'hook1'</span>,
+  }
+);
+
+<span class="hljs-comment">// another component</span>
+
+<span class="hljs-comment">// useMutation((schema) =&gt; {</span>
+useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">//...</span>
+  },
+  {
+    <span class="hljs-comment">// You could also specify the cache-only fetchPolicy</span>
+    <span class="hljs-comment">// To optimize the hook and prevent unwanted</span>
+    <span class="hljs-comment">// network fetches.</span>
+    fetchPolicy: <span class="hljs-string">'cache-only'</span>,
+    <span class="hljs-comment">//...</span>
+    sharedCacheId: <span class="hljs-string">'hook1'</span>,
+  }
+);</code></pre>
+				<a href="#hooks-pool" id="hooks-pool" style="color: inherit; text-decoration: none;">
+					<h3>Hooks pool</h3>
+				</a>
+				<p>You can also synchronize different hooks manually using the <strong>gqless &quot;<em>HooksPool</em>&quot;</strong>, available through <strong>onCompleted</strong> and <strong>fetchMore &quot;updateCache&quot;</strong> function.</p>
+				<p>Since this functionality needs more type-safety to work more safely you will need to use some <strong>type augmentation</strong>.</p>
+				<p>For example, in any file in your project:</p>
+				<pre><code class="language-ts"><span class="hljs-comment">// You also could use the same generated types from gqless</span>
+<span class="hljs-keyword">declare</span> global {
+  <span class="hljs-keyword">interface</span> gqlessHooksPool {
+    query1: {
+      data: <span class="hljs-built_in">string</span>[];
+      variables: {
+        variable1: <span class="hljs-built_in">number</span>;
+      };
+      query2: {
+        data: <span class="hljs-built_in">string</span>;
+      };
+    };
+  }
+}</code></pre>
+				<p>Then you can use it</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">const</span> [, { fetchMore }] = useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">//...</span>
+  },
+  {
+    hookId: <span class="hljs-string">'query1'</span>,
+    onCompleted(data, hooksPool) {
+      <span class="hljs-comment">/**
+       * hooksPool ===
+       * {
+       *    query1?: {
+       *      callback: ({ variables, fetchPolicy }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
+       *      refetch: ({ variables }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
+       *      state: { current: { fetchState, data, error, called } },
+       *      setData: (data: Maybe&lt;TData&gt; | ((previousData: Maybe&lt;TData&gt;) =&gt; Maybe&lt;TData&gt;)) =&gt; void
+       *    },
+       *    query2?: {
+       *      callback: ({ variables, fetchPolicy }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
+       *      refetch: ({ variables }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
+       *      state: { current: { fetchState, data, error, called } },
+       *      setData: (data: Maybe&lt;TData&gt; | ((previousData: Maybe&lt;TData&gt;) =&gt; Maybe&lt;TData&gt;)) =&gt; void
+       *    }
+       * }
+       */</span>
+    },
+  }
+);
+
+<span class="hljs-comment">// ...</span>
+
+fetchMore({
+  variables: {
+    <span class="hljs-comment">//...</span>
+  },
+  updateCache(previousData, resultData, hooksPool) {
+    <span class="hljs-comment">// hooksPool is the same as onCompleted above</span>
+    <span class="hljs-keyword">return</span> [...previousData, ...resultData];
+  },
+});</code></pre>
+				<a href="#pagination" id="pagination" style="color: inherit; text-decoration: none;">
+					<h3>Pagination</h3>
+				</a>
+				<p>For pagination you can use <strong>fetchMore</strong> from <strong>useQuery</strong>, somewhat following <a href="https://www.apollographql.com/docs/react/data/pagination/#using-fetchmore">Apollo fetchMore</a> API.</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">const</span> [{ data }, { fetchMore }] = useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema, { skip, limit }</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> {
+      nodes,
+      pageInfo: { hasNext },
+    } = schema.feed({
+      skip,
+      limit,
+    });
+
+    <span class="hljs-keyword">return</span> {
+      nodes: nodes.map(<span class="hljs-function">(<span class="hljs-params">{ _id, title }</span>) =&gt;</span> {
+        <span class="hljs-keyword">return</span> {
+          _id,
+          title,
+        };
+      }),
+      pageInfo: {
+        hasNext,
+      },
+    };
+  },
+  {
+    variables: {
+      skip: <span class="hljs-number">0</span>,
+      limit: <span class="hljs-number">5</span>,
+    },
+  }
+);
+
+<span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">if</span> (data?.hasNext) {
+  <span class="hljs-keyword">const</span> newData = <span class="hljs-keyword">await</span> fetchMore({
+    variables: {
+      skip: data.length,
+    },
+    updateQuery(previousResult, newResult) {
+      <span class="hljs-keyword">if</span> (!newResult) <span class="hljs-keyword">return</span> previousResult;
+
+      <span class="hljs-comment">// Here you are handling the raw data, not "accessors"</span>
+      <span class="hljs-keyword">return</span> {
+        pageInfo: newResult.pageInfo,
+        nodes: [...(previousResult?.nodes ?? []), ...newResult.nodes],
+      };
+    },
+  });
+}</code></pre>
 				<a href="#about-it" id="about-it" style="color: inherit; text-decoration: none;">
 					<h2>About it</h2>
 				</a>
-				<p>These hooks are a proof of concept that ended up working and is a good workaround until <strong>React Suspense</strong> is officially released (with <strong>good SSR support</strong>) and <a href="https://github.com/samdenty/gqless/issues/51">Mutation are officially supported by gqless</a>.</p>
-				<p>If you are only using these hooks and not the default <strong>query</strong> from gqless, you <strong>don&#39;t need to use the graphql HOC</strong>.</p>
+				<p>These hooks are a proof of concept that ended up working and is a good workaround until <strong>React Suspense</strong> is officially released (with <strong>good SSR support</strong>), along with the lack of functionality out of the box of the official gqless API, and of course, <a href="https://github.com/samdenty/gqless/issues/51">Mutation is officially supported by gqless</a>.</p>
+				<p>If you are only using these hooks and not the default <strong>query</strong> from gqless, you <strong>don&#39;t need to use the graphql HOC</strong>, and it means <strong>less</strong> bundle size.</p>
 				<a href="#future" id="future" style="color: inherit; text-decoration: none;">
 					<h2>Future</h2>
 				</a>
 				<ul>
 					<li>Add more examples of usage</li>
+					<li>Suspense support</li>
 					<li>Add support for Subscriptions</li>
-					<li>Add support for Pagination with a <strong>fetchMore</strong>-alike (since gqless doesn&#39;t have planned support for it for the foreseeable future)</li>
 				</ul>
+				<a href="#contributing" id="contributing" style="color: inherit; text-decoration: none;">
+					<h2>Contributing</h2>
+				</a>
+				<p>Everyone is more than welcome to help in this project, there is a lot of work still to do to improve this library, but I hope it&#39;s useful, as it has been while I personally use it for some of my new web development projects.</p>
 			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">

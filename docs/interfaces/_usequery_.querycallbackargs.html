@@ -105,6 +105,7 @@
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_usequery_.querycallbackargs.html#fetchpolicy" class="tsd-kind-icon">fetch<wbr>Policy</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_usequery_.querycallbackargs.html#query" class="tsd-kind-icon">query</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_usequery_.querycallbackargs.html#shoulddispatchdata" class="tsd-kind-icon">should<wbr>Dispatch<wbr>Data</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_usequery_.querycallbackargs.html#variables" class="tsd-kind-icon">variables</a></li>
 							</ul>
 						</section>
@@ -119,7 +120,7 @@
 					<div class="tsd-signature tsd-kind-icon">fetch<wbr>Policy<span class="tsd-signature-symbol">:</span> <a href="../modules/_common_.html#fetchpolicy" class="tsd-signature-type">FetchPolicy</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L49">useQuery.ts:49</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L50">useQuery.ts:50</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -134,7 +135,7 @@
 					<div class="tsd-signature tsd-kind-icon">query<span class="tsd-signature-symbol">:</span> <a href="../modules/_usequery_.html#queryfn" class="tsd-signature-type">QueryFn</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Query</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L45">useQuery.ts:45</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L46">useQuery.ts:46</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -144,12 +145,28 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
+					<a name="shoulddispatchdata" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> should<wbr>Dispatch<wbr>Data</h3>
+					<div class="tsd-signature tsd-kind-icon">should<wbr>Dispatch<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L60">useQuery.ts:60</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Whether it should dispatch to the hook the data results</p>
+						</div>
+						<p>By default is true</p>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
 					<a name="variables" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> variables</h3>
 					<div class="tsd-signature tsd-kind-icon">variables<span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type">TVariables</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L53">useQuery.ts:53</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L54">useQuery.ts:54</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -194,6 +211,9 @@
 								<a href="_usequery_.querycallbackargs.html#query" class="tsd-kind-icon">query</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
+								<a href="_usequery_.querycallbackargs.html#shoulddispatchdata" class="tsd-kind-icon">should<wbr>Dispatch<wbr>Data</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
 								<a href="_usequery_.querycallbackargs.html#variables" class="tsd-kind-icon">variables</a>
 							</li>
 						</ul>
@@ -208,6 +228,9 @@
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
 						<a href="_usequery_.usequeryhelpers.html" class="tsd-kind-icon">Use<wbr>Query<wbr>Helpers</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
+						<a href="../modules/_usequery_.html#fetchmorecallback" class="tsd-kind-icon">Fetch<wbr>More<wbr>Callback</a>
 					</li>
 					<li class=" tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
 						<a href="../modules/_usequery_.html#querycallback" class="tsd-kind-icon">Query<wbr>Callback</a>

@@ -80,6 +80,7 @@
 						<section class="tsd-index-section ">
 							<h3>Type aliases</h3>
 							<ul class="tsd-index-list">
+								<li class="tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported"><a href="_usequery_.html#fetchmorecallback" class="tsd-kind-icon">Fetch<wbr>More<wbr>Callback</a></li>
 								<li class="tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported"><a href="_usequery_.html#querycallback" class="tsd-kind-icon">Query<wbr>Callback</a></li>
 								<li class="tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported"><a href="_usequery_.html#queryfn" class="tsd-kind-icon">Query<wbr>Fn</a></li>
 								<li class="tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported"><a href="_usequery_.html#queryquickcallback" class="tsd-kind-icon">Query<wbr>Quick<wbr>Callback</a></li>
@@ -98,12 +99,117 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Type aliases</h2>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
+					<a name="fetchmorecallback" class="tsd-anchor"></a>
+					<h3>Fetch<wbr>More<wbr>Callback</h3>
+					<div class="tsd-signature tsd-kind-icon">Fetch<wbr>More<wbr>Callback&lt;TData, TVariables&gt;<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>fetchMoreOptions<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span>notifyLoading<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol">; </span>updateQuery<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>previousResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, fetchMoreResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooksPool<span class="tsd-signature-symbol">: </span><a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>variables<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L119">useQuery.ts:119</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>fetchMore pagination function</p>
+						</div>
+						<p>You should specify a subset of the hooks variables
+							which will merge with the specified in the hook options
+							and a <strong>updateQuery</strong> function that should return the new data
+						hopefully merged with the previous data.</p>
+						<p>It returns a promise of the resulting merged data and updates
+						the hook data</p>
+					</div>
+					<h4 class="tsd-type-parameters-title">Type parameters</h4>
+					<ul class="tsd-type-parameters">
+						<li>
+							<h4>TData</h4>
+						</li>
+						<li>
+							<h4>TVariables<span class="tsd-signature-symbol">: </span><a href="_common_.html#ivariables" class="tsd-signature-type">IVariables</a></h4>
+						</li>
+					</ul>
+					<div class="tsd-type-declaration">
+						<h4>Type declaration</h4>
+						<ul class="tsd-parameters">
+							<li class="tsd-parameter-signature">
+								<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-type-alias tsd-is-not-exported">
+									<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>fetchMoreOptions<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span>notifyLoading<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol">; </span>updateQuery<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>previousResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, fetchMoreResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooksPool<span class="tsd-signature-symbol">: </span><a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>variables<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+								</ul>
+								<ul class="tsd-descriptions">
+									<li class="tsd-description">
+										<h4 class="tsd-parameters-title">Parameters</h4>
+										<ul class="tsd-parameters">
+											<li>
+												<h5>fetchMoreOptions: <span class="tsd-signature-symbol">{ </span>notifyLoading<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol">; </span>updateQuery<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>previousResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, fetchMoreResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooksPool<span class="tsd-signature-symbol">: </span><a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>variables<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> }</span></h5>
+												<ul class="tsd-parameters">
+													<li class="tsd-parameter">
+														<h5><span class="tsd-flag ts-flagOptional">Optional</span> notify<wbr>Loading<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></h5>
+														<div class="tsd-comment tsd-typography">
+															<div class="lead">
+																<p>Whether the hook should re-render when the network is calling fetchMore</p>
+															</div>
+															<p>The default value is the same already used for <strong>notifyOnNetworkStatusChange</strong></p>
+														</div>
+													</li>
+													<li class="tsd-parameter">
+														<h5>update<wbr>Query<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>previousResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, fetchMoreResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooksPool<span class="tsd-signature-symbol">: </span><a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h5>
+														<div class="tsd-comment tsd-typography">
+															<div class="lead">
+																<p>Function that receives the previous data,
+																the result of the query just fetched.</p>
+															</div>
+															<p>It should return the new data merged with the
+															previous data.</p>
+														</div>
+														<ul class="tsd-parameters">
+															<li class="tsd-parameter-signature">
+																<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-variable tsd-is-not-exported">
+																	<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>previousResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, fetchMoreResult<span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooksPool<span class="tsd-signature-symbol">: </span><a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+																</ul>
+																<ul class="tsd-descriptions">
+																	<li class="tsd-description">
+																		<h4 class="tsd-parameters-title">Parameters</h4>
+																		<ul class="tsd-parameters">
+																			<li>
+																				<h5>previousResult: <a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span></h5>
+																			</li>
+																			<li>
+																				<h5>fetchMoreResult: <a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span></h5>
+																			</li>
+																			<li>
+																				<h5>hooksPool: <a href="_common_.html#hookspool" class="tsd-signature-type">HooksPool</a></h5>
+																			</li>
+																		</ul>
+																		<h4 class="tsd-returns-title">Returns <a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+																	</li>
+																</ul>
+															</li>
+														</ul>
+													</li>
+													<li class="tsd-parameter">
+														<h5>variables<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span></h5>
+														<div class="tsd-comment tsd-typography">
+															<div class="lead">
+																<p>Subset of the original variables of the query</p>
+															</div>
+														</div>
+													</li>
+												</ul>
+											</li>
+										</ul>
+										<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
 					<a name="querycallback" class="tsd-anchor"></a>
 					<h3>Query<wbr>Callback</h3>
 					<div class="tsd-signature tsd-kind-icon">Query<wbr>Callback&lt;TData, Query, TVariables&gt;<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>queryArgs<span class="tsd-signature-symbol">?: </span><a href="../interfaces/_usequery_.querycallbackargs.html" class="tsd-signature-type">QueryCallbackArgs</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Query</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L59">useQuery.ts:59</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L66">useQuery.ts:66</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -151,7 +257,7 @@
 					<div class="tsd-signature tsd-kind-icon">Query<wbr>Fn&lt;Query, TData, TVariables&gt;<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>schema<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Client</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Query</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">"query"</span><span class="tsd-signature-symbol">]</span>, variables<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">TData</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L27">useQuery.ts:27</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L28">useQuery.ts:28</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -204,7 +310,7 @@
 					<div class="tsd-signature tsd-kind-icon">Query<wbr>Quick<wbr>Callback&lt;TData, TVariables&gt;<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>queryArgs<span class="tsd-signature-symbol">?: </span><a href="../interfaces/_usequery_.queryquickcallbackargs.html" class="tsd-signature-type">QueryQuickCallbackArgs</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L76">useQuery.ts:76</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L83">useQuery.ts:83</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -249,7 +355,7 @@
 					<div class="tsd-signature tsd-kind-icon">Use<wbr>Query&lt;Query&gt;<span class="tsd-signature-symbol">:</span> &lt;TData, TVariables&gt;<span class="tsd-signature-symbol">(</span>queryFn<span class="tsd-signature-symbol">: </span><a href="_usequery_.html#queryfn" class="tsd-signature-type">QueryFn</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Query</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span>, options<span class="tsd-signature-symbol">?: </span><a href="../interfaces/_usequery_.queryoptions.html" class="tsd-signature-type">QueryOptions</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-symbol">[</span><a href="../interfaces/_common_.istate.html" class="tsd-signature-type">IState</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">, </span><a href="../interfaces/_usequery_.usequeryhelpers.html" class="tsd-signature-type">UseQueryHelpers</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Query</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">TVariables</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L124">useQuery.ts:124</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L181">useQuery.ts:181</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -310,7 +416,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/370678e/src/useQuery.ts#L170">useQuery.ts:170</a></li>
+									<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L234">useQuery.ts:234</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -372,6 +478,9 @@
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
 						<a href="../interfaces/_usequery_.usequeryhelpers.html" class="tsd-kind-icon">Use<wbr>Query<wbr>Helpers</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
+						<a href="_usequery_.html#fetchmorecallback" class="tsd-kind-icon">Fetch<wbr>More<wbr>Callback</a>
 					</li>
 					<li class=" tsd-kind-type-alias tsd-parent-kind-module tsd-has-type-parameter tsd-is-not-exported">
 						<a href="_usequery_.html#querycallback" class="tsd-kind-icon">Query<wbr>Callback</a>
