@@ -151,6 +151,12 @@ type FetchMoreCallback<
    * The default value is the same already used for **notifyOnNetworkStatusChange**
    */
   notifyLoading?: boolean;
+  /**
+   * fetchPolicy used for the query
+   *
+   * Default value is **cache-first**
+   */
+  fetchPolicy?: FetchPolicy;
 }) => Promise<Maybe<TData>>;
 
 /**
@@ -501,30 +507,6 @@ export const createUseQuery = <
         });
     }
 
-    useEffect(() => {
-      if (pollInterval > 0) {
-        const interval = setInterval(async () => {
-          if (
-            !isFetchingRef.current && optionsRef.current.lazy
-              ? stateRef.current.called
-              : true
-          ) {
-            isFetchingRef.current = true;
-            await queryCallbackRef
-              .current({ fetchPolicy: 'network-only' })
-              .catch(console.error);
-            isFetchingRef.current = false;
-          }
-        }, pollInterval);
-
-        return () => {
-          clearInterval(interval);
-        };
-      }
-
-      return;
-    }, [pollInterval]);
-
     const isFirstMountRef = useRef(true);
 
     const serializedVariables = variables ? JSON.stringify(variables) : '';
@@ -547,12 +529,21 @@ export const createUseQuery = <
       variablesStringHistory.current = new Set();
     }
 
+    const lastUpdateQueryRef = useRef<
+      (
+        previousResult: Maybe<TData>,
+        fetchMoreResult: Maybe<TData>,
+        hooksPool: HooksPool
+      ) => TData | Promise<Maybe<TData>> | null | undefined
+    >();
+
     const helpers = useMemo<UseQueryHelpers<Query, TData, TVariables>>(() => {
       return {
         fetchMore: async ({
           variables: partialVariables,
           updateQuery,
           notifyLoading,
+          fetchPolicy = 'cache-first',
         }) => {
           notifyLoading =
             notifyLoading ??
@@ -561,6 +552,7 @@ export const createUseQuery = <
 
           let previousVariables = optionsRef.current.variables;
 
+          lastUpdateQueryRef.current = updateQuery;
           if (previousVariables && variablesStringHistory.current.size === 0) {
             variablesStringHistory.current.add(
               JSON.stringify(previousVariables)
@@ -582,7 +574,7 @@ export const createUseQuery = <
           stateRef.current.called = true;
           const fetchMoreResult = await queryCallbackRef.current({
             variables,
-            fetchPolicy: 'cache-first',
+            fetchPolicy,
             shouldDispatchData: false,
           });
           isFetchingRef.current = false;
@@ -620,6 +612,55 @@ export const createUseQuery = <
         query: queryClientRef.current.query,
       };
     }, []);
+
+    useEffect(() => {
+      if (pollInterval > 0) {
+        const interval = setInterval(async () => {
+          if (
+            !isFetchingRef.current && optionsRef.current.lazy
+              ? stateRef.current.called
+              : true
+          ) {
+            isFetchingRef.current = true;
+            const updateQuery = lastUpdateQueryRef.current;
+            if (updateQuery) {
+              const fetchMore = helpers.fetchMore;
+              const currentVariables =
+                optionsRef.current.variables ||
+                (defaultEmptyObject as TVariables);
+
+              await Promise.all(
+                Array.from(variablesStringHistory.current).map(
+                  (variablesSerialized) => {
+                    return fetchMore({
+                      fetchPolicy: 'cache-and-network',
+                      notifyLoading: false,
+                      variables: {
+                        ...currentVariables,
+                        ...JSON.parse(variablesSerialized),
+                      },
+                      updateQuery,
+                    });
+                  }
+                )
+              );
+            } else {
+              await queryCallbackRef
+                .current({ fetchPolicy: 'network-only' })
+                .catch(console.error);
+            }
+
+            isFetchingRef.current = false;
+          }
+        }, pollInterval);
+
+        return () => {
+          clearInterval(interval);
+        };
+      }
+
+      return;
+    }, [pollInterval, helpers]);
 
     useEffect(() => {
       if (hookId != null) {
