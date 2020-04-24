@@ -102,9 +102,9 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    *       variables: {
    *         variable1: number;
    *       };
-   *       query2: {
-   *         data: string;
-   *       };
+   *     };
+   *     query2: {
+   *       data: string;
    *     };
    *   }
    * }

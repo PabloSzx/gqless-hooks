@@ -239,7 +239,7 @@ You can also synchronize different hooks manually using the **gqless "_HooksPool
 
 Since this functionality needs more type-safety to work more safely you will need to use some **type augmentation**.
 
-For example, in any file in your project:
+> For example, in any file inside your project:
 
 ```ts
 // You also could use the same generated types from gqless
@@ -250,15 +250,15 @@ declare global {
       variables: {
         variable1: number;
       };
-      query2: {
-        data: string;
-      };
+    };
+    query2: {
+      data: string;
     };
   }
 }
 ```
 
-Then you can use it
+Then you can use them
 
 ```ts
 const [, { fetchMore }] = useQuery(
