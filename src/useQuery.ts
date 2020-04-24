@@ -169,10 +169,6 @@ interface UseQueryHelpers<Query, TData, TVariables extends IVariables> {
    * Pagination query
    */
   fetchMore: FetchMoreCallback<TData, TVariables>;
-  /**
-   * *Vanilla* **gqless** Client "*query*".
-   */
-  query: Query;
 }
 
 /**
@@ -248,9 +244,10 @@ export const createUseQuery = <
       pollInterval,
       variables,
       sharedCacheId,
-      hookId,
       notifyOnNetworkStatusChange,
     } = (optionsRef.current = defaultOptions(options));
+
+    const hookId = (optionsRef.current.hookId as unknown) as string | undefined;
 
     const isMountedRef = useRef(false);
     const isFetchingRef = useRef(false);
@@ -598,6 +595,7 @@ export const createUseQuery = <
           );
 
           if (
+            stateRef.current.fetchState !== 'done' ||
             stringifyIfNeeded(data) !== stringifyIfNeeded(stateRef.current.data)
           ) {
             dispatch({
@@ -617,7 +615,6 @@ export const createUseQuery = <
         },
 
         callback: queryCallbackRef.current,
-        query: queryClientRef.current.query,
       };
     }, []);
 
@@ -662,9 +659,9 @@ export const createUseQuery = <
           SharedCache.hooksPool
         );
       }
-    }, [isStateDone]);
+    }, [isStateDone, stateRef.current.data]);
 
-    return useMemo(() => [state, helpers], [state, helpers]);
+    return useMemo(() => [{ ...state }, helpers], [state, helpers]);
   };
 
   return useQuery;

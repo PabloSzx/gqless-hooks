@@ -33,6 +33,9 @@ export const query = client.query;
 export const useQuery = createUseQuery<Query>({
   endpoint,
   schema,
+  creationHeaders: {
+    authorization: 'any_token',
+  },
 });
 
 export const useMutation = createUseMutation<Mutation>({

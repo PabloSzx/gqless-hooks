@@ -1,3 +1,4 @@
+import { GraphQLError } from 'graphql';
 import { useState } from 'react';
 import waitForExpect from 'wait-for-expect';
 
@@ -7,6 +8,7 @@ import {
   renderHook,
 } from '@testing-library/react-hooks';
 
+import { IS_NOT_PRODUCTION, SharedCache } from '../src/common';
 import { useMutation, useQuery } from './generated/graphql/client';
 import {
   close,
@@ -285,6 +287,8 @@ describe('detect variables change', () => {
 
 describe('multiple hooks usage and cache', () => {
   test('array push and reset', async () => {
+    let completedMutation1 = false;
+
     const { result } = renderHook(() => {
       const query1 = useQuery(
         ({ loremIpsum }, args) => {
@@ -315,9 +319,17 @@ describe('multiple hooks usage and cache', () => {
           fetchPolicy: 'cache-and-network',
         }
       );
-      const mutation1 = useMutation(({ resetLoremIpsum }) => {
-        return resetLoremIpsum.map((v) => v);
-      }, {});
+
+      const mutation1 = useMutation(
+        ({ resetLoremIpsum }) => {
+          return resetLoremIpsum.map((v) => v);
+        },
+        {
+          onCompleted: () => {
+            completedMutation1 = true;
+          },
+        }
+      );
 
       return {
         query1,
@@ -355,27 +367,31 @@ describe('multiple hooks usage and cache', () => {
     expect(result.current.query1[0].fetchState).toBe('done');
     expect(result.current.query2[0].fetchState).toBe('done');
 
+    expect(completedMutation1).toBe(false);
     await act(async () => {
       expect(result.current.mutation1[1].fetchState).toBe('waiting');
 
       await result.current.mutation1[0]();
+
       expect(result.current.mutation1[1].fetchState).toBe('done');
       expect(result.current.mutation1[1].data).toHaveLength(0);
 
       await result.current.query1[1].refetch();
-
-      await waitForExpect(() => {
-        expect(result.current.query1[0].data).toHaveLength(1);
-      }, 500);
-
-      await waitForExpect(() => {
-        expect(result.current.query1[0].data).toHaveLength(1);
-
-        expect(result.current.query1[0].data).toEqual(
-          result.current.query2[0].data
-        );
-      }, 500);
     });
+
+    expect(completedMutation1).toBe(true);
+
+    await waitForExpect(() => {
+      expect(result.current.query1[0].data).toHaveLength(1);
+    }, 500);
+
+    await waitForExpect(() => {
+      expect(result.current.query1[0].data).toHaveLength(1);
+
+      expect(result.current.query1[0].data).toEqual(
+        result.current.query2[0].data
+      );
+    }, 500);
   }, 10000);
 });
 
@@ -458,5 +474,191 @@ describe('pagination', () => {
       expect(result.current[0].fetchState).toBe('done');
       clearInterval(fetchStateIsAlwaysDoneInterval);
     });
+  });
+});
+
+declare global {
+  interface gqlessHooksPool {
+    duplicateHookId: {};
+  }
+}
+
+describe('warn in dev mode', () => {
+  it('warn duplicate hookId', () => {
+    const warnSpy = jest
+      .spyOn(global.console, 'warn')
+      .mockImplementation(() => {});
+
+    renderHook(() => {
+      useQuery(
+        () => {
+          return 'asd';
+        },
+        {
+          hookId: 'duplicateHookId',
+        }
+      );
+      useQuery(() => {}, {
+        hookId: 'duplicateHookId',
+      });
+    });
+
+    expect(warnSpy).toBeCalledTimes(1);
+
+    warnSpy.mockRestore();
+  });
+  it('ignore duplicate hookId on production', () => {
+    //@ts-ignore
+    IS_NOT_PRODUCTION = false;
+
+    const warnSpy = jest
+      .spyOn(global.console, 'warn')
+      .mockImplementation(() => {});
+
+    renderHook(() => {
+      useQuery(() => {}, {
+        hookId: 'duplicateHookId',
+      });
+      useQuery(() => {}, {
+        hookId: 'duplicateHookId',
+      });
+    });
+
+    expect(warnSpy).toBeCalledTimes(0);
+
+    warnSpy.mockRestore();
+
+    //@ts-ignore
+    IS_NOT_PRODUCTION = !IS_NOT_PRODUCTION;
+  });
+});
+
+describe('detect cache id changes', () => {
+  it('subscribes again after shared cache id changes', async () => {
+    const subscribersKeys: string[] = [];
+    const SharedCacheMock = jest
+      .spyOn(SharedCache, 'subscribeCache')
+      .mockImplementation((cacheKey) => {
+        subscribersKeys.push(cacheKey);
+        return () => {};
+      });
+
+    const Hook1xD = renderHook(() => {
+      const state = useState('cacheKey1');
+      useQuery(() => {}, {
+        sharedCacheId: state[0],
+      });
+
+      return state;
+    }, {});
+
+    expect(SharedCacheMock).toBeCalledTimes(1);
+
+    expect(subscribersKeys).toEqual(['cacheKey1']);
+
+    act(() => {
+      Hook1xD.result.current[1]('cacheKey2');
+    });
+
+    expect(SharedCacheMock).toBeCalledTimes(2);
+
+    expect(subscribersKeys).toEqual(['cacheKey1', 'cacheKey2']);
+    act(() => {
+      Hook1xD.result.current[1]('cacheKey3');
+    });
+    SharedCacheMock.mockRestore();
+  });
+});
+
+describe('catches errors', () => {
+  it('intentional schema arg error', async () => {
+    const errorsMessages: any[] = [];
+
+    const expectedErrorMessage = 'Expected type String!, found 123.';
+
+    const consoleErrorSpy = jest
+      .spyOn(global.console, 'error')
+      .mockImplementation((error) => {
+        errorsMessages.push(error);
+      });
+
+    const onErrorEventErrors: GraphQLError[] = [];
+    const onError = jest.fn().mockImplementation((errors: GraphQLError[]) => {
+      onErrorEventErrors.push(...errors);
+    });
+
+    const { result } = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.hello({
+            //@ts-ignore
+            name: 123,
+          });
+        },
+        {
+          onError,
+        }
+      );
+    });
+
+    expect(result.current[0].fetchState).toBe('loading');
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(result.current[0].fetchState).toBe('error');
+      }, 500);
+    });
+
+    expect(onError).toBeCalledTimes(1);
+
+    expect(onErrorEventErrors).toHaveLength(1);
+    expect(errorsMessages).toHaveLength(1);
+    expect(result.current[0].errors).toHaveLength(1);
+    expect(errorsMessages[0][0].message).toBe(expectedErrorMessage);
+    expect(errorsMessages[0]).toEqual(onErrorEventErrors);
+    expect(result.current[0].errors?.[0].message).toBe(expectedErrorMessage);
+    expect(result.current[0].errors).toEqual(onErrorEventErrors);
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('cache policies prevents fetch', () => {
+  it('cache-only at first', () => {
+    const { result } = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.hello({
+            name: '123',
+          });
+        },
+        {
+          fetchPolicy: 'cache-only',
+        }
+      );
+    });
+
+    expect(result.current[0].data).toBeFalsy();
+  });
+
+  it('cache-only at callback', async () => {
+    const { result } = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.hello({
+            name: '123',
+          });
+        },
+        {
+          fetchPolicy: 'network-only',
+          lazy: true,
+        }
+      );
+    });
+
+    await act(async () => {
+      await result.current[1].callback({ fetchPolicy: 'cache-only' });
+    });
+
+    expect(result.current[0].data).toBeFalsy();
   });
 });

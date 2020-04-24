@@ -63,12 +63,7 @@ type MutationFn<TData, Mutation, TVariables extends IVariables> = (
 /**
  * **useMutation** data state returned from hook.
  */
-interface UseMutationState<Mutation, TData> extends IState<TData> {
-  /**
-   * *Vanilla* **gqless** Client query.
-   */
-  query: Mutation;
-}
+interface UseMutationState<Mutation, TData> extends IState<TData> {}
 
 /**
  * **useMutation** hook
@@ -130,7 +125,9 @@ export const createUseMutation = <
     options: MutationOptions<TData, TVariables> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
-    const { hookId } = (optionsRef.current = defaultOptions(options));
+    const { hookId } = ((optionsRef.current = defaultOptions(options)) as {
+      hookId?: unknown;
+    }) as { hookId?: string };
 
     const mutationFnRef = useRef(mutationFn);
     mutationFnRef.current = mutationFn;
@@ -261,15 +258,12 @@ export const createUseMutation = <
       if (isStateDone && onCompleted) {
         onCompleted(stateRef.current.data, SharedCache.hooksPool);
       }
-    }, [isStateDone]);
+    }, [isStateDone, stateRef.current.data]);
 
-    return useMemo(
-      () => [
-        mutationCallback,
-        { ...state, query: mutationClientRef.current.query },
-      ],
-      [state, mutationCallback]
-    );
+    return useMemo(() => [mutationCallback, { ...state }], [
+      state,
+      mutationCallback,
+    ]);
   };
 
   return useMutation;

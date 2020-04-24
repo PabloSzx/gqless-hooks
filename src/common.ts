@@ -60,7 +60,8 @@ export type IVariables = Record<string, unknown>;
 
 export interface CommonHookOptions<TData, TVariables extends IVariables> {
   /**
-   * Event called on every successful hook call. (except "cache-only" calls)
+   * Event called on every successful hook call.
+   * Including **cache updates**, **setData** calls, and **successful network calls**.
    *
    * It first receives the resulting **data** of the hook call
    * and the hooks pool, identified by **hookId** option.
@@ -191,8 +192,6 @@ export const StateReducer = <TData>(
       };
     }
     case 'loading': {
-      if (reducerState.fetchState === 'loading') return reducerState;
-
       action.stateRef.current.fetchState = 'loading';
 
       return {
@@ -217,8 +216,6 @@ export const StateReducer = <TData>(
         data: action.payload,
       };
     }
-    default:
-      return reducerState;
   }
 };
 
@@ -270,7 +267,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       dispatch,
       endpoint,
       effects,
-      type = 'query',
+      type,
       creationHeaders = defaultEmptyObject,
       stateRef,
       notifyOnNetworkStatusChangeRef: { current: shouldNotifyLoading },
@@ -308,14 +305,16 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
     if (!response.ok) {
       let errorPayload: GraphQLError[];
 
-      const errorText = `Network error, received status code ${response.status} ${response.statusText}`;
-
       if (Array.isArray(json?.errors)) {
         errorPayload = json.errors;
       } else if (Array.isArray(json)) {
         errorPayload = json;
       } else {
-        errorPayload = [new GraphQLError(errorText)];
+        errorPayload = [
+          new GraphQLError(
+            `Network error, received status code ${response.status} ${response.statusText}`
+          ),
+        ];
       }
 
       effects.onErrorEffect?.(errorPayload);
@@ -328,7 +327,9 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
         stateRef,
       });
 
-      throw Error(errorText);
+      if (json) return json;
+
+      throw errorPayload;
     }
 
     if (json?.errors) {
@@ -404,23 +405,6 @@ export interface Hook<TData, TVariables extends IVariables> {
   ) => void;
 }
 
-function usePreviousDistinct<T>(value: T): T | undefined {
-  const prevRef = useRef<T>();
-  const curRef = useRef<T>(value);
-  const isFirstMount = useRef(true);
-
-  if (!isFirstMount && curRef.current !== value) {
-    prevRef.current = curRef.current;
-    curRef.current = value;
-  }
-
-  if (isFirstMount.current) {
-    isFirstMount.current = false;
-  }
-
-  return prevRef.current;
-}
-
 export const useSubscribeCache = (args: {
   sharedCacheId: string | undefined;
   dispatch: Dispatch<IDispatch<any>>;
@@ -431,7 +415,6 @@ export const useSubscribeCache = (args: {
 }) => {
   const argsRef = useRef(args);
   const { sharedCacheId, stateRef, optionsRef } = (argsRef.current = args);
-  const previousCacheKey = usePreviousDistinct(sharedCacheId);
 
   const firstMount = useRef(true);
 
@@ -465,7 +448,7 @@ export const useSubscribeCache = (args: {
     return;
   }, [sharedCacheId]);
 
-  if (sharedCacheId && previousCacheKey !== sharedCacheId) {
+  if (sharedCacheId) {
     if (firstMount.current) {
       firstMount.current = false;
 
@@ -546,23 +529,17 @@ export const SharedCache = {
 
   hooksPool: {} as HooksPool,
 
-  subscribeHookPool: (
-    hookId: string | number | undefined,
-    hook: Hook<any, any>
-  ) => {
-    if (hookId != null) {
-      if (IS_NOT_PRODUCTION) {
-        if (hookId in SharedCache.hooksPool) {
-          console.warn(
-            `Duplicated hook id "${hookId}", previous hook overwriten!`
-          );
-        }
+  subscribeHookPool: (hookId: string | number, hook: Hook<any, any>) => {
+    if (IS_NOT_PRODUCTION) {
+      if (hookId in SharedCache.hooksPool) {
+        console.warn(
+          `Duplicated hook id "${hookId}", previous hook overwriten!`
+        );
       }
-      (SharedCache.hooksPool as any)[hookId] = hook;
-      return () => {
-        delete (SharedCache.hooksPool as any)[hookId];
-      };
     }
-    return;
+    (SharedCache.hooksPool as any)[hookId] = hook;
+    return () => {
+      delete (SharedCache.hooksPool as any)[hookId];
+    };
   },
 };
