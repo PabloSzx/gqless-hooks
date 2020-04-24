@@ -24,8 +24,14 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 - [Features](#features)
 - [Docs and API Reference](#docs-and-api-reference)
 - [Usage tips](#usage-tips)
+  - [Headers](#headers)
+  - [Polling](#polling)
+  - [Shared cache](#shared-cache)
+  - [Hooks pool](#hooks-pool)
+  - [Pagination](#pagination)
 - [About it](#about-it)
 - [Future](#future)
+- [Contributing](#contributing)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
