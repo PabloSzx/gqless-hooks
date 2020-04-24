@@ -84,9 +84,17 @@ npm install gqless-hooks</code></pre>
 					<li><a href="#usage">Usage</a></li>
 					<li><a href="#features">Features</a></li>
 					<li><a href="#docs-and-api-reference">Docs and API Reference</a></li>
-					<li><a href="#usage-tips">Usage tips</a></li>
+					<li><a href="#usage-tips">Usage tips</a><ul>
+							<li><a href="#headers">Headers</a></li>
+							<li><a href="#polling">Polling</a></li>
+							<li><a href="#shared-cache">Shared cache</a></li>
+							<li><a href="#hooks-pool">Hooks pool</a></li>
+							<li><a href="#pagination">Pagination</a></li>
+						</ul>
+					</li>
 					<li><a href="#about-it">About it</a></li>
 					<li><a href="#future">Future</a></li>
+					<li><a href="#contributing">Contributing</a></li>
 				</ul>
 				<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 				<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
@@ -271,7 +279,9 @@ useQuery(
 				</a>
 				<p>You can also synchronize different hooks manually using the <strong>gqless &quot;<em>HooksPool</em>&quot;</strong>, available through <strong>onCompleted</strong> and <strong>fetchMore &quot;updateCache&quot;</strong> function.</p>
 				<p>Since this functionality needs more type-safety to work more safely you will need to use some <strong>type augmentation</strong>.</p>
-				<p>For example, in any file in your project:</p>
+				<blockquote>
+					<p>For example, in any file inside your project:</p>
+				</blockquote>
 				<pre><code class="language-ts"><span class="hljs-comment">// You also could use the same generated types from gqless</span>
 <span class="hljs-keyword">declare</span> global {
   <span class="hljs-keyword">interface</span> gqlessHooksPool {
@@ -280,13 +290,13 @@ useQuery(
       variables: {
         variable1: <span class="hljs-built_in">number</span>;
       };
-      query2: {
-        data: <span class="hljs-built_in">string</span>;
-      };
+    };
+    query2: {
+      data: <span class="hljs-built_in">string</span>;
     };
   }
 }</code></pre>
-				<p>Then you can use it</p>
+				<p>Then you can use them</p>
 				<pre><code class="language-ts"><span class="hljs-keyword">const</span> [, { fetchMore }] = useQuery(
   <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
     <span class="hljs-comment">//...</span>

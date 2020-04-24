@@ -129,7 +129,7 @@
 					<div class="tsd-signature tsd-kind-icon">fetch<wbr>Policy<span class="tsd-signature-symbol">:</span> <a href="../modules/_common_.html#fetchpolicy" class="tsd-signature-type">FetchPolicy</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L203">useQuery.ts:203</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/useQuery.ts#L199">useQuery.ts:199</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -147,7 +147,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#fetchtimeout">fetchTimeout</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L78">common.ts:78</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L79">common.ts:79</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -163,7 +163,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#headers">headers</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L82">common.ts:82</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L83">common.ts:83</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -179,7 +179,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#hookid">hookId</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L112">common.ts:112</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L113">common.ts:113</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -199,9 +199,9 @@
 									variables: {
 									variable1: number;
 									};
+									};
 									query2: {
 									data: string;
-									};
 									};
 									}
 								}</p>
@@ -215,7 +215,7 @@
 					<div class="tsd-signature tsd-kind-icon">lazy<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L209">useQuery.ts:209</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/useQuery.ts#L205">useQuery.ts:205</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -231,7 +231,7 @@
 					<div class="tsd-signature tsd-kind-icon">notify<wbr>OnNetwork<wbr>Status<wbr>Change<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L228">useQuery.ts:228</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/useQuery.ts#L224">useQuery.ts:224</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -249,12 +249,13 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#oncompleted">onCompleted</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L70">common.ts:70</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L71">common.ts:71</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>Event called on every successful hook call. (except &quot;cache-only&quot; calls)</p>
+							<p>Event called on every successful hook call.
+							Including <strong>cache updates</strong>, <strong>setData</strong> calls, and <strong>successful network calls</strong>.</p>
 						</div>
 						<p>It first receives the resulting <strong>data</strong> of the hook call
 						and the hooks pool, identified by <strong>hookId</strong> option.</p>
@@ -268,7 +269,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#onerror">onError</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L74">common.ts:74</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L75">common.ts:75</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -283,7 +284,7 @@
 					<div class="tsd-signature tsd-kind-icon">poll<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L213">useQuery.ts:213</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/useQuery.ts#L209">useQuery.ts:209</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -298,7 +299,7 @@
 					<div class="tsd-signature tsd-kind-icon">shared<wbr>Cache<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/useQuery.ts#L221">useQuery.ts:221</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/useQuery.ts#L217">useQuery.ts:217</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -317,7 +318,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#variables">variables</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/94a5a8a/src/common.ts#L89">common.ts:89</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/a213ad1/src/common.ts#L90">common.ts:90</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
