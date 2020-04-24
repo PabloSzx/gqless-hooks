@@ -17,6 +17,7 @@ import {
   useFetchCallback,
   useSubscribeCache,
   HooksPool,
+  lazyInitialState,
 } from './common';
 
 /**
@@ -93,6 +94,7 @@ const defaultOptions = <TData, TVariables extends IVariables>(
     fetchTimeout = 10000,
     pollInterval = 0,
     notifyOnNetworkStatusChange = true,
+    skip = false,
     ...rest
   } = options;
   return {
@@ -101,6 +103,7 @@ const defaultOptions = <TData, TVariables extends IVariables>(
     fetchTimeout,
     pollInterval,
     notifyOnNetworkStatusChange,
+    skip,
     ...rest,
   };
 };
@@ -222,6 +225,12 @@ export interface QueryOptions<TData, TVariables extends IVariables>
    * **By default it's set to true**
    */
   notifyOnNetworkStatusChange?: boolean;
+  /**
+   * Skip automatic query hook call if it's set to true
+   *
+   * This option only works if lazy is false or not specified
+   */
+  skip?: boolean;
 }
 
 /**
@@ -245,6 +254,7 @@ export const createUseQuery = <
       variables,
       sharedCacheId,
       notifyOnNetworkStatusChange,
+      skip,
     } = (optionsRef.current = defaultOptions(options));
 
     const hookId = (optionsRef.current.hookId as unknown) as string | undefined;
@@ -261,12 +271,7 @@ export const createUseQuery = <
     const [state, dispatch] = useReducer<IStateReducer<TData>, IState<TData>>(
       StateReducer,
       undefined as any,
-      () => {
-        if (lazy) {
-          return { fetchState: 'waiting', called: false, data: undefined };
-        }
-        return { fetchState: 'loading', called: true, data: undefined };
-      }
+      lazyInitialState
     );
 
     const stateRef = useRef(state);
@@ -480,37 +485,68 @@ export const createUseQuery = <
     const queryCallbackRef = useRef(queryCallback);
     queryCallbackRef.current = queryCallback;
 
+    /**
+     * Auto first hook call
+     */
     if (
+      !lazy &&
+      !skip &&
       !foundCache &&
       !isMountedRef.current &&
-      !isFetchingRef.current &&
-      !lazy
+      !isFetchingRef.current
     ) {
+      state.fetchState = 'loading';
+      state.called = true;
       isFetchingRef.current = true;
 
       queryCallback()
-        .then(() => {
+        .catch(console.error)
+        .finally(() => {
           isFetchingRef.current = false;
-        })
-        .catch((error) => {
-          isFetchingRef.current = false;
-          console.error(error);
         });
     }
 
+    /**
+     * Skip first call effect
+     */
+    useEffect(() => {
+      if (
+        !lazy &&
+        !skip &&
+        !stateRef.current.called &&
+        !isFetchingRef.current
+      ) {
+        isFetchingRef.current = true;
+        stateRef.current.called = true;
+        queryCallbackRef
+          .current()
+          .catch(console.error)
+          .finally(() => {
+            isFetchingRef.current = false;
+          });
+      }
+    }, [skip]);
+
+    /**
+     * Polling effect
+     */
     useEffect(() => {
       if (pollInterval > 0) {
         const interval = setInterval(async () => {
           if (
-            !isFetchingRef.current && optionsRef.current.lazy
+            !optionsRef.current.skip &&
+            !isFetchingRef.current &&
+            optionsRef.current.lazy
               ? stateRef.current.called
               : true
           ) {
             isFetchingRef.current = true;
             await queryCallbackRef
               .current({ fetchPolicy: 'network-only' })
-              .catch(console.error);
-            isFetchingRef.current = false;
+              .catch(console.error)
+              .finally(() => {
+                isFetchingRef.current = false;
+              });
           }
         }, pollInterval);
 
@@ -526,18 +562,28 @@ export const createUseQuery = <
 
     const serializedVariables = variables ? JSON.stringify(variables) : '';
 
+    /**
+     * Variables on change refetch effect
+     */
     useEffect(() => {
       if (isFirstMountRef.current) {
         isMountedRef.current = true;
         isFirstMountRef.current = false;
       } else if (
         optionsRef.current.variables &&
-        (optionsRef.current.lazy ? stateRef.current.called : true)
+        (optionsRef.current.lazy ? stateRef.current.called : true) &&
+        !skip &&
+        !isFetchingRef.current
       ) {
         isFetchingRef.current = true;
-        queryCallbackRef.current().catch(console.error);
+        queryCallbackRef
+          .current()
+          .catch(console.error)
+          .finally(() => {
+            isFetchingRef.current = false;
+          });
       }
-    }, [serializedVariables]);
+    }, [serializedVariables, skip]);
 
     const variablesStringHistory = useRef<Set<string>>(undefined as never);
     if (variablesStringHistory.current === undefined) {
@@ -618,6 +664,9 @@ export const createUseQuery = <
       };
     }, []);
 
+    /**
+     * HooksPool effect subscription
+     */
     useEffect(() => {
       if (hookId != null) {
         return SharedCache.subscribeHookPool(hookId, {
@@ -652,6 +701,9 @@ export const createUseQuery = <
 
     const isStateDone = state.fetchState === 'done';
 
+    /**
+     * onCompleted hook event
+     */
     useEffect(() => {
       if (isStateDone && optionsRef.current.onCompleted) {
         optionsRef.current.onCompleted(

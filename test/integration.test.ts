@@ -244,11 +244,48 @@ describe('basic usage and cache', () => {
     expect(otherQuery.result.current[0].fetchState).toBe('done');
     expect(otherQuery.result.current[0].data).toBe('query zxc!');
   });
+
+  test('initial skip works', async () => {
+    const query = renderHook(() => {
+      const skipState = useState(true);
+      const hook = useQuery(
+        ({ hello }) => {
+          return hello({
+            name: 'olk',
+          });
+        },
+        {
+          skip: skipState[0],
+        }
+      );
+
+      return {
+        skipState,
+        hook,
+      };
+    });
+
+    expect(query.result.current.hook[0].fetchState).toBe('waiting');
+
+    await act(async () => {
+      query.result.current.skipState[1](false);
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].fetchState).toBe('loading');
+      }, 1000);
+
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].fetchState).toBe('done');
+      }, 1000);
+    });
+
+    expect(query.result.current.hook[0].data).toBe('query olk!');
+  });
 });
 
 describe('detect variables change', () => {
-  test('query variables', async () => {
+  test('query variables and skip', async () => {
     const query = renderHook(() => {
+      const skipState = useState(false);
       const nameState = useState('cvb');
       const hook = useQuery(
         ({ hello }, { name }) => {
@@ -259,13 +296,15 @@ describe('detect variables change', () => {
           return result;
         },
         {
+          sharedCacheId: 'queryvariables',
+          skip: skipState[0],
           variables: {
             name: nameState[0],
           },
         }
       );
 
-      return { hook, nameState };
+      return { hook, nameState, skipState };
     });
 
     await act(async () => {
@@ -281,6 +320,30 @@ describe('detect variables change', () => {
         expect(query.result.current.hook[0].data).toBe('query jkl!');
         expect(query.result.current.hook[0].fetchState).toBe('done');
       }, 500);
+    });
+
+    await act(async () => {
+      query.result.current.skipState[1](true);
+      query.result.current.nameState[1]('bnm');
+    });
+
+    expect(query.result.current.hook[0].fetchState).toBe('done');
+    expect(query.result.current.hook[0].data).toBe('query jkl!');
+
+    await act(async () => {
+      query.result.current.skipState[1](false);
+
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].fetchState).toBe('loading');
+      }, 1000);
+    });
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(query.result.current.hook[0].data).toBe('query bnm!');
+
+        expect(query.result.current.hook[0].fetchState).toBe('done');
+      }, 1000);
     });
   });
 });

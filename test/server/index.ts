@@ -49,7 +49,11 @@ const Query = queryType({
     });
     t.string('hello', {
       args: { name: stringArg({ nullable: false }) },
-      resolve: (_root, { name }) => `query ${name}!`,
+      async resolve(_root, { name }) {
+        await randomDelay();
+
+        return `query ${name}!`;
+      },
     });
     t.list.string('loremIpsum', {
       nullable: false,

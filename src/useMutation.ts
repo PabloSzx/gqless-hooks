@@ -13,6 +13,7 @@ import {
   SharedCache,
   StateReducer,
   useFetchCallback,
+  lazyInitialState,
 } from './common';
 
 /**
@@ -97,14 +98,6 @@ export interface MutationOptions<TData, TVariables extends IVariables>
   sharedCacheId?: string;
 }
 
-const lazyInitialState = (): IState<any> => {
-  return {
-    fetchState: 'waiting',
-    called: false,
-    data: undefined,
-  };
-};
-
 const notifyOnNetworkStatusChangeRef = { current: true };
 
 /**
@@ -154,14 +147,6 @@ export const createUseMutation = <
       notifyOnNetworkStatusChangeRef,
     });
 
-    const initialMutationClient = useMemo(() => {
-      const client = new Client<Mutation>(schema.Mutation, fetchMutation);
-
-      return client;
-    }, [fetchMutation]);
-
-    const mutationClientRef = useRef<Client<Mutation>>(initialMutationClient);
-
     const mutationCallback = useCallback<
       MutationCallback<TData, Mutation, TVariables>
     >(
@@ -197,8 +182,6 @@ export const createUseMutation = <
 
         const dataValue = mutation(client.query, variables);
 
-        mutationClientRef.current = client;
-
         dispatch({
           type: 'done',
           payload: dataValue,
@@ -217,9 +200,13 @@ export const createUseMutation = <
       },
       [fetchMutation]
     );
+
     const mutationCallbackRef = useRef(mutationCallback);
     mutationCallbackRef.current = mutationCallback;
 
+    /**
+     * HooksPool effect subscription
+     */
     useEffect(() => {
       if (hookId != null) {
         return SharedCache.subscribeHookPool(hookId, {
@@ -253,6 +240,9 @@ export const createUseMutation = <
 
     const isStateDone = state.fetchState === 'done';
 
+    /**
+     * onCompleted hook event
+     */
     useEffect(() => {
       const onCompleted = optionsRef.current.onCompleted;
       if (isStateDone && onCompleted) {

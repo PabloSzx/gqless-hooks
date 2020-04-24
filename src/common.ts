@@ -416,6 +416,14 @@ export interface Hook<TData, TVariables extends IVariables> {
   ) => void;
 }
 
+export const lazyInitialState = (): IState<any> => {
+  return {
+    fetchState: 'waiting',
+    data: undefined,
+    called: false,
+  };
+};
+
 export const useSubscribeCache = (args: {
   sharedCacheId: string | undefined;
   dispatch: Dispatch<IDispatch<any>>;
@@ -460,7 +468,7 @@ export const useSubscribeCache = (args: {
   }, [sharedCacheId]);
 
   if (sharedCacheId) {
-    if (firstMount.current) {
+    if (firstMount.current && !optionsRef.current.skip) {
       firstMount.current = false;
 
       if (!optionsRef.current.lazy) {
