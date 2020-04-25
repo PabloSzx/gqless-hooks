@@ -294,6 +294,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         ...creationHeaders,
         ...headers,
       },
