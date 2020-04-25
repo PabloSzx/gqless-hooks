@@ -462,14 +462,14 @@ export const createUseQuery = <
               payload: dataValue,
               stateRef,
             });
-          }
 
-          if (optionsRef.current.sharedCacheId) {
-            SharedCache.setCacheData(
-              optionsRef.current.sharedCacheId,
-              dataValue,
-              cacheSubscribeFn
-            );
+            if (optionsRef.current.sharedCacheId) {
+              SharedCache.setCacheData(
+                optionsRef.current.sharedCacheId,
+                dataValue,
+                cacheSubscribeFn
+              );
+            }
           }
 
           return dataValue;
@@ -642,13 +642,21 @@ export const createUseQuery = <
 
           if (
             stateRef.current.fetchState !== 'done' ||
-            stringifyIfNeeded(data) !== stringifyIfNeeded(stateRef.current.data)
+            data !== stateRef.current.data
           ) {
             dispatch({
               type: 'done',
               payload: data,
               stateRef,
             });
+
+            if (optionsRef.current.sharedCacheId) {
+              SharedCache.setCacheData(
+                optionsRef.current.sharedCacheId,
+                data,
+                cacheSubscribeFn
+              );
+            }
           }
 
           return data;
