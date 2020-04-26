@@ -18,6 +18,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -197,9 +198,9 @@ useQuery(
 );
 ```
 
-### Shared cache
+### Shared cache and in memory persistence
 
-You can specify that some hooks actually refer to the same data, and for that you can specify a **_sharedCacheId_** that will automatically synchronize the hooks data.
+You can specify that some hooks actually refer to the same data, and for that you can specify a **_sharedCacheId_** that will automatically synchronize the hooks data, or persist in memory hooks data.
 
 > _Be careful and make sure the synchronized hooks share the same data type signature_
 
@@ -229,6 +230,33 @@ useQuery(
     fetchPolicy: 'cache-only',
     //...
     sharedCacheId: 'hook1',
+  }
+);
+```
+
+You also can manipulate the **shared cache** directly using `setCacheData` and **prevent unnecessary network calls** or **synchronize** different hooks.
+
+```ts
+import { setCacheData } from 'gqless-hooks';
+
+// This declaration is optional type-safety
+declare global {
+  interface gqlessSharedCache {
+    hookKey1: string[];
+  }
+}
+
+setCacheData('hookKey1', ['hello', 'world']);
+
+// ...
+
+useQuery(
+  (schema) => {
+    // ...
+  },
+  {
+    // ...
+    sharedCacheId: 'hookKey1',
   }
 );
 ```

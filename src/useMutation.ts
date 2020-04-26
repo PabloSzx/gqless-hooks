@@ -95,7 +95,7 @@ export interface MutationOptions<TData, TVariables extends IVariables>
    * you can specify a shared cache id between those hooks which
    * will update the queries data
    */
-  sharedCacheId?: string;
+  sharedCacheId?: keyof gqlessSharedCache;
 }
 
 const notifyOnNetworkStatusChangeRef = { current: true };

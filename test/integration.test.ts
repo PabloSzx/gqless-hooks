@@ -8,7 +8,7 @@ import {
   renderHook,
 } from '@testing-library/react-hooks';
 
-import { IS_NOT_PRODUCTION, SharedCache } from '../src/common';
+import { IS_NOT_PRODUCTION, SharedCache, setCacheData } from '../src/common';
 import { useMutation, useQuery } from './generated/graphql/client';
 import {
   close,
@@ -60,6 +60,11 @@ declare global {
   }
 }
 
+declare global {
+  interface gqlessSharedCache {
+    queryhello1: string;
+  }
+}
 describe('basic usage and cache', () => {
   test('query works and minimizes renders calls', async () => {
     const nRenderFirst = renderCount();
@@ -598,7 +603,7 @@ describe('warn in dev mode', () => {
 
 describe('detect cache id changes', () => {
   it('subscribes again after shared cache id changes', async () => {
-    const subscribersKeys: string[] = [];
+    const subscribersKeys: (string | number)[] = [];
     const SharedCacheMock = jest
       .spyOn(SharedCache, 'subscribeCache')
       .mockImplementation((cacheKey) => {
@@ -723,5 +728,70 @@ describe('cache policies prevents fetch', () => {
     });
 
     expect(result.current[0].data).toBeFalsy();
+  });
+});
+
+describe('manual cache manipulation', () => {
+  it('setCache works and prevents fetch', async () => {
+    const sharedCacheId = 'manualSetCacheKey';
+
+    const loremString =
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut pretium orci, pellentesque lacinia sem. Suspendisse consectetur dolor dapibus luctus tincidunt. Integer lacinia dictum semper.';
+
+    setCacheData(sharedCacheId, loremString);
+
+    const queryCacheFirst = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.hello({
+            name: 'bbbbbb',
+          });
+        },
+        {
+          sharedCacheId,
+        }
+      );
+    });
+
+    expect(queryCacheFirst.result.current[0].fetchState).toBe('done');
+    expect(queryCacheFirst.result.current[0].data).toBe(loremString);
+
+    const queryCacheFirstSkip = renderHook(() => {
+      const [skip, setSkip] = useState(true);
+
+      const query = useQuery(
+        (schema) => {
+          return schema.hello({
+            name: 'mmmm',
+          });
+        },
+        {
+          sharedCacheId,
+          skip,
+          fetchPolicy: 'cache-first',
+        }
+      );
+
+      return {
+        query,
+        skip,
+        setSkip,
+      };
+    });
+
+    expect(queryCacheFirstSkip.result.current.query[0].data).toBe(undefined);
+    expect(queryCacheFirstSkip.result.current.query[0].fetchState).toBe(
+      'waiting'
+    );
+
+    act(() => {
+      expect(queryCacheFirstSkip.result.current.skip).toBe(true);
+      queryCacheFirstSkip.result.current.setSkip(false);
+    });
+
+    expect(queryCacheFirstSkip.result.current.skip).toBe(false);
+
+    expect(queryCacheFirstSkip.result.current.query[0].fetchState).toBe('done');
+    expect(queryCacheFirstSkip.result.current.query[0].data).toBe(loremString);
   });
 });

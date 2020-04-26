@@ -86,7 +86,7 @@ type QueryQuickCallback<TData, TVariables extends IVariables> = (
 ) => Promise<Maybe<TData>>;
 
 const defaultOptions = <TData, TVariables extends IVariables>(
-  options: QueryOptions<TData, TVariables>
+  options: QueryOptions<TData, TVariables, keyof gqlessSharedCache>
 ) => {
   const {
     lazy = false,
@@ -177,7 +177,11 @@ interface UseQueryHelpers<Query, TData, TVariables extends IVariables> {
 /**
  * **useQuery** hook
  */
-export type UseQuery<Query> = <TData, TVariables extends IVariables>(
+export type UseQuery<Query> = <
+  TData,
+  TVariables extends IVariables,
+  CacheKey extends keyof gqlessSharedCache
+>(
   /**
    * Query function, it should return the data expected from the mutation
    */
@@ -185,14 +189,17 @@ export type UseQuery<Query> = <TData, TVariables extends IVariables>(
   /**
    * Optional options to give the query hook
    */
-  options?: QueryOptions<TData, TVariables>
+  options?: QueryOptions<TData, TVariables, CacheKey>
 ) => [IState<TData>, UseQueryHelpers<Query, TData, TVariables>];
 
 /**
  * Options of useQuery
  */
-export interface QueryOptions<TData, TVariables extends IVariables>
-  extends CommonHookOptions<TData, TVariables> {
+export interface QueryOptions<
+  TData,
+  TVariables extends IVariables,
+  CacheKey extends keyof gqlessSharedCache
+> extends CommonHookOptions<TData, TVariables> {
   /**
    * Fetch policy used for the query hook.
    *
@@ -204,6 +211,8 @@ export interface QueryOptions<TData, TVariables extends IVariables>
    * Specify **lazy** behaviour of the query.
    *
    * Wait until explicit query call.
+   *
+   * _It also disables `sharedCacheId` behaviour_
    */
   lazy?: boolean;
   /**
@@ -215,9 +224,12 @@ export interface QueryOptions<TData, TVariables extends IVariables>
    *
    * In order to be able to sync different query hooks data
    * you can specify a shared cache id between those hooks which
-   * will update each other data
+   * will update each other data.
+   *
+   * This cache id also works as **in memory persistence** across different
+   * hook instances of the same hook, across navigating through different pages for example.
    */
-  sharedCacheId?: string;
+  sharedCacheId?: CacheKey;
   /**
    * Whether the hook should re-render when it's fetching after a refetch
    * and change it's **fetchState** to **_"loading"_**
@@ -244,8 +256,8 @@ export const createUseQuery = <
 ): UseQuery<Query> => {
   const { endpoint, schema, creationHeaders } = createOptions;
   const useQuery: UseQuery<Query> = <TData, TVariables extends IVariables>(
-    queryFn: QueryFn<Query, TData, TVariables>,
-    options: QueryOptions<TData, TVariables> = defaultEmptyObject
+    queryFn: QueryFn<Query, any, TVariables>,
+    options: QueryOptions<any, TVariables, string | number> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
     const {
@@ -721,7 +733,7 @@ export const createUseQuery = <
       }
     }, [isStateDone, stateRef.current.data]);
 
-    return useMemo(() => [{ ...state }, helpers], [state, helpers]);
+    return [state, helpers];
   };
 
   return useQuery;

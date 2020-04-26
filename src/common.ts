@@ -364,8 +364,56 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   }, []);
 };
 
+/**
+ * Contains globally accessible and mergeable **gqless-hooks** interfaces.
+ */
 declare global {
+  /**
+   * **gqless-hooks** Hooks Pool
+   *
+   * It enables `hookId` hook option and
+   * the hooks are available at **onCompleted**
+   * and `fetchMore`.
+   *
+   * `Please follow this example type signature.`
+   * @example
+   * declare global {
+   *    interface gqlessHooksPool {
+   *     query1: {
+   *       data: string[];
+   *       variables: {
+   *         variable1: number;
+   *       };
+   *     };
+   *     query2: {
+   *       data: string;
+   *     };
+   *   }
+   * }
+   */
   interface gqlessHooksPool {}
+
+  /**
+   * **gqless-hooks** Shared Cache
+   *
+   * The hooks subscribe to this cache through `sharedCacheId` option
+   * and you can imperatively modify it using the function `setCacheData`
+   * exported from `"gqless-hooks"`.
+   *
+   * @example
+   * import { setCacheData } from "gqless-hooks";
+   *
+   * declare global {
+   *   interface gqlessSharedCache {
+   *     cacheKey: string[];
+   *   }
+   * }
+   *
+   * // ...
+   *
+   * setCacheData("cacheKey", ["hello", "world"]);
+   */
+  interface gqlessSharedCache extends Record<string, any> {}
 }
 
 type gqlessHookVariableTemplate = { variables: IVariables };
@@ -426,12 +474,12 @@ export const lazyInitialState = (): IState<any> => {
 };
 
 export const useSubscribeCache = (args: {
-  sharedCacheId: string | undefined;
+  sharedCacheId: keyof gqlessSharedCache | undefined;
   dispatch: Dispatch<IDispatch<any>>;
   stateRef: {
     current: IState<any>;
   };
-  optionsRef: { current: QueryOptions<any, any> };
+  optionsRef: { current: QueryOptions<any, any, keyof gqlessSharedCache> };
 }) => {
   const argsRef = useRef(args);
   const { sharedCacheId, stateRef, optionsRef } = (argsRef.current = args);
@@ -443,7 +491,7 @@ export const useSubscribeCache = (args: {
   const foundCache = useRef(false);
 
   useEffect(() => {
-    if (sharedCacheId) {
+    if (sharedCacheId != null) {
       const { stateRef, dispatch } = argsRef.current;
       cacheSubscribeFnRef.current = (data) => {
         if (stateRef.current.fetchState === 'done') {
@@ -468,7 +516,7 @@ export const useSubscribeCache = (args: {
     return;
   }, [sharedCacheId]);
 
-  if (sharedCacheId) {
+  if (sharedCacheId != null) {
     if (firstMount.current && !optionsRef.current.skip) {
       firstMount.current = false;
 
@@ -503,11 +551,11 @@ export const useSubscribeCache = (args: {
 type CacheSubFn = (data: any) => void;
 
 export const SharedCache = {
-  cacheData: {} as Record<string, any>,
+  cacheData: {} as gqlessSharedCache,
 
   cacheSubscribers: {} as Record<string, Set<CacheSubFn>>,
 
-  subscribeCache: (cacheKey: string, fn: CacheSubFn) => {
+  subscribeCache: (cacheKey: keyof gqlessSharedCache, fn: CacheSubFn) => {
     let cacheKeySubscribers = SharedCache.cacheSubscribers[cacheKey];
     if (cacheKeySubscribers) {
       const cacheData = SharedCache.cacheData[cacheKey];
@@ -530,7 +578,7 @@ export const SharedCache = {
   },
 
   setCacheData: (
-    cacheKey: string,
+    cacheKey: keyof gqlessSharedCache,
     data: any,
     setter: { current?: CacheSubFn } | null
   ) => {
@@ -562,4 +610,27 @@ export const SharedCache = {
       delete (SharedCache.hooksPool as any)[hookId];
     };
   },
+};
+
+/**
+ * Set imperatively the data of a key in the **Shared cache**.
+ *
+ * It can be useful for preparing an specific hook data and
+ * prevent unnecessary fetches
+ *
+ * To improve it's type-safety you can declare anywhere
+ * it's types following the example
+ *
+ * @example
+ * declare global {
+ *   interface gqlessSharedCache {
+ *     anyCacheKey: string[]
+ *   }
+ * }
+ */
+export const setCacheData = <Key extends keyof gqlessSharedCache>(
+  cacheKey: Key,
+  data: gqlessSharedCache[Key]
+) => {
+  SharedCache.setCacheData(cacheKey, data, null);
 };
