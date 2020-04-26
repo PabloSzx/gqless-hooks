@@ -615,6 +615,9 @@ export const SharedCache = {
 /**
  * Set imperatively the data of a key in the **Shared cache**.
  *
+ * `You can give the data right away or a function that receives
+ * the previous cacheData and returns the new data`
+ *
  * It can be useful for preparing an specific hook data and
  * prevent unnecessary fetches
  *
@@ -630,7 +633,19 @@ export const SharedCache = {
  */
 export const setCacheData = <Key extends keyof gqlessSharedCache>(
   cacheKey: Key,
-  data: gqlessSharedCache[Key]
+  data:
+    | Maybe<gqlessSharedCache[Key]>
+    | ((
+        prevData: Maybe<gqlessSharedCache[Key]>
+      ) => Maybe<gqlessSharedCache[Key]>)
 ) => {
-  SharedCache.setCacheData(cacheKey, data, null);
+  if (typeof data === 'function') {
+    SharedCache.setCacheData(
+      cacheKey,
+      data(SharedCache.cacheData[cacheKey]),
+      null
+    );
+  } else {
+    SharedCache.setCacheData(cacheKey, data, null);
+  }
 };

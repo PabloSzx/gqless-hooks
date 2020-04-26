@@ -731,6 +731,12 @@ describe('cache policies prevents fetch', () => {
   });
 });
 
+declare global {
+  interface gqlessSharedCache {
+    manualSetCacheKey: string;
+  }
+}
+
 describe('manual cache manipulation', () => {
   it('setCache works and prevents fetch', async () => {
     const sharedCacheId = 'manualSetCacheKey';
@@ -793,5 +799,36 @@ describe('manual cache manipulation', () => {
 
     expect(queryCacheFirstSkip.result.current.query[0].fetchState).toBe('done');
     expect(queryCacheFirstSkip.result.current.query[0].data).toBe(loremString);
+
+    act(() => {
+      setCacheData(sharedCacheId, (prevData) => {
+        return `${prevData}_string_concat`;
+      });
+    });
+
+    const queryCacheAfterConcat = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.hello({
+            name: 'zzzz',
+          });
+        },
+        {
+          sharedCacheId,
+        }
+      );
+    });
+
+    expect(queryCacheAfterConcat.result.current[0].data).toBe(
+      loremString + '_string_concat'
+    );
+
+    expect(queryCacheFirst.result.current[0].data).toBe(
+      loremString + '_string_concat'
+    );
+
+    expect(queryCacheFirstSkip.result.current.query[0].data).toBe(
+      loremString + '_string_concat'
+    );
   });
 });
