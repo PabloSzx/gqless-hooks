@@ -240,10 +240,10 @@ useQuery(
     pollInterval: <span class="hljs-number">100</span>,
   }
 );</code></pre>
-				<a href="#shared-cache" id="shared-cache" style="color: inherit; text-decoration: none;">
-					<h3>Shared cache</h3>
+				<a href="#shared-cache-and-in-memory-persistence" id="shared-cache-and-in-memory-persistence" style="color: inherit; text-decoration: none;">
+					<h3>Shared cache and in memory persistence</h3>
 				</a>
-				<p>You can specify that some hooks actually refer to the same data, and for that you can specify a <strong><em>sharedCacheId</em></strong> that will automatically synchronize the hooks data.</p>
+				<p>You can specify that some hooks actually refer to the same data, and for that you can specify a <strong><em>sharedCacheId</em></strong> that will automatically synchronize the hooks data, or persist in memory hooks data.</p>
 				<blockquote>
 					<p><em>Be careful and make sure the synchronized hooks share the same data type signature</em></p>
 				</blockquote>
@@ -272,6 +272,29 @@ useQuery(
     fetchPolicy: <span class="hljs-string">'cache-only'</span>,
     <span class="hljs-comment">//...</span>
     sharedCacheId: <span class="hljs-string">'hook1'</span>,
+  }
+);</code></pre>
+				<p>You also can manipulate the <strong>shared cache</strong> directly using <code>setCacheData</code> and <strong>prevent unnecessary network calls</strong> or <strong>synchronize</strong> different hooks.</p>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { setCacheData } <span class="hljs-keyword">from</span> <span class="hljs-string">'gqless-hooks'</span>;
+
+<span class="hljs-comment">// This declaration is optional type-safety</span>
+<span class="hljs-keyword">declare</span> global {
+  <span class="hljs-keyword">interface</span> gqlessSharedCache {
+    hookKey1: <span class="hljs-built_in">string</span>[];
+  }
+}
+
+setCacheData(<span class="hljs-string">'hookKey1'</span>, [<span class="hljs-string">'hello'</span>, <span class="hljs-string">'world'</span>]);
+
+<span class="hljs-comment">// ...</span>
+
+useQuery(
+  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-comment">// ...</span>
+  },
+  {
+    <span class="hljs-comment">// ...</span>
+    sharedCacheId: <span class="hljs-string">'hookKey1'</span>,
   }
 );</code></pre>
 				<a href="#hooks-pool" id="hooks-pool" style="color: inherit; text-decoration: none;">
@@ -438,6 +461,7 @@ fetchMore({
 		<h2>Legend</h2>
 		<div class="tsd-legend-group">
 			<ul class="tsd-legend">
+				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
 				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
