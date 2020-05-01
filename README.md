@@ -18,7 +18,6 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 **Table of Contents**
 
 - [Usage](#usage)
@@ -30,6 +29,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
   - [Shared cache and in memory persistence](#shared-cache-and-in-memory-persistence)
   - [Hooks pool](#hooks-pool)
   - [Pagination](#pagination)
+  - [getAccessorFields | getArrayAccessorFields](#getaccessorfields--getarrayaccessorfields)
 - [About it](#about-it)
 - [Future](#future)
 - [Contributing](#contributing)
