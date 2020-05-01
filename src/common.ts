@@ -649,3 +649,65 @@ export const setCacheData = <Key extends keyof gqlessSharedCache>(
     SharedCache.setCacheData(cacheKey, data, null);
   }
 };
+
+/**
+ * Shorthand utility function to return data from accessors
+ *
+ * @example
+ * ```ts
+ * useQuery((schema, variables) => {
+ *    // This is the long way
+ *    // const { title, content, publishedData } =
+ *    // schema.blog({ id: variables.id });
+ *    // return { title, content, publishedData };
+ *
+ *    // This is the quicker way
+ *    return getAccessorFields(schema.blog({ id: variables.id }), "title", "content", "publishedDate");
+ * })
+ * ```
+ */
+export const getAccessorFields = <
+  TAccesorData,
+  TAccesorKeys extends keyof TAccesorData
+>(
+  accessor: TAccesorData,
+  ...keys: TAccesorKeys[]
+) => {
+  let data: { [k in TAccesorKeys]: TAccesorData[k] } = {} as {
+    [k in TAccesorKeys]: TAccesorData[k];
+  };
+
+  for (const key of keys) {
+    data[key] = accessor[key];
+  }
+
+  return data;
+};
+
+/**
+ * Shorthand utility function to return data from an accessor array
+ *
+ * @example
+ * ```ts
+ * useQuery((schema) => {
+ *    // This is the long way
+ *    // return schema.blogList.map({ title, content, publishedData }
+ *    // => ({ title, content, publishedData }));
+ *
+ *    // This is the quicker way
+ *    return getArrayAccessorFields(schema.blogList, "title", "content","publishedData");
+ * })
+ * ```
+ */
+export const getArrayAccessorFields = <
+  TArrayValue,
+  TArray extends TArrayValue[],
+  TArrayValueKeys extends keyof TArrayValue
+>(
+  accessorArray: TArray,
+  ...keys: TArrayValueKeys[]
+) => {
+  return accessorArray.map((data) => {
+    return getAccessorFields(data, ...keys);
+  });
+};

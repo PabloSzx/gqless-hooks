@@ -18,6 +18,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -381,6 +382,51 @@ if (data?.hasNext) {
     },
   });
 }
+```
+
+### getAccessorFields | getArrayAccessorFields
+
+When using this library there is a common pattern in the schema -> query functions which is just destructuring the data you need from the query, the problem is that it tends to be very repetitive, and for that this library exports a couple of utility functions that help with this problem.
+
+These functions are designed to help with autocomplete and type-safety.
+
+> Keep in mind that these functions are composable.
+
+```ts
+import { getAccessorFields } from 'gqless-hooks';
+
+useQuery((schema, variables) => {
+  // This is the long way
+  // const { title, content, publishedData } =
+  // schema.blog({ id: variables.id });
+  // return { title, content, publishedData };
+
+  // This is the quicker way
+  return getAccessorFields(
+    schema.blog({ id: variables.id }),
+    'title',
+    'content',
+    'publishedDate'
+  );
+});
+```
+
+```ts
+import { getArrayAccessorFields } from 'gqless-hooks';
+
+useQuery((schema) => {
+  // This is the long way
+  // return schema.blogList.map({ title, content, publishedData }
+  // => ({ title, content, publishedData }));
+
+  // This is the quicker way
+  return getArrayAccessorFields(
+    schema.blogList,
+    'title',
+    'content',
+    'publishedData'
+  );
+});
 ```
 
 ## About it

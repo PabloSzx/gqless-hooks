@@ -1,4 +1,10 @@
 export { createUseMutation } from './useMutation';
 export { createUseQuery } from './useQuery';
 
-export { Maybe, FetchPolicy, setCacheData } from './common';
+export {
+  Maybe,
+  FetchPolicy,
+  setCacheData,
+  getAccessorFields,
+  getArrayAccessorFields,
+} from './common';
