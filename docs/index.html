@@ -410,6 +410,45 @@ fetchMore({
     },
   });
 }</code></pre>
+				<a href="#getaccessorfields--getarrayaccessorfields" id="getaccessorfields--getarrayaccessorfields" style="color: inherit; text-decoration: none;">
+					<h3>getAccessorFields | getArrayAccessorFields</h3>
+				</a>
+				<p>When using this library there is a common pattern in the schema -&gt; query functions which is just destructuring the data you need from the query, the problem is that it tends to be very repetitive, and for that this library exports a couple of utility functions that help with this problem.</p>
+				<p>These functions are designed to help with autocomplete and type-safety.</p>
+				<blockquote>
+					<p>Keep in mind that these functions are composable.</p>
+				</blockquote>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { getAccessorFields } <span class="hljs-keyword">from</span> <span class="hljs-string">'gqless-hooks'</span>;
+
+useQuery(<span class="hljs-function">(<span class="hljs-params">schema, variables</span>) =&gt;</span> {
+  <span class="hljs-comment">// This is the long way</span>
+  <span class="hljs-comment">// const { title, content, publishedData } =</span>
+  <span class="hljs-comment">// schema.blog({ id: variables.id });</span>
+  <span class="hljs-comment">// return { title, content, publishedData };</span>
+
+  <span class="hljs-comment">// This is the quicker way</span>
+  <span class="hljs-keyword">return</span> getAccessorFields(
+    schema.blog({ id: variables.id }),
+    <span class="hljs-string">'title'</span>,
+    <span class="hljs-string">'content'</span>,
+    <span class="hljs-string">'publishedDate'</span>
+  );
+});</code></pre>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { getArrayAccessorFields } <span class="hljs-keyword">from</span> <span class="hljs-string">'gqless-hooks'</span>;
+
+useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+  <span class="hljs-comment">// This is the long way</span>
+  <span class="hljs-comment">// return schema.blogList.map({ title, content, publishedData }</span>
+  <span class="hljs-comment">// =&gt; ({ title, content, publishedData }));</span>
+
+  <span class="hljs-comment">// This is the quicker way</span>
+  <span class="hljs-keyword">return</span> getArrayAccessorFields(
+    schema.blogList,
+    <span class="hljs-string">'title'</span>,
+    <span class="hljs-string">'content'</span>,
+    <span class="hljs-string">'publishedData'</span>
+  );
+});</code></pre>
 				<a href="#about-it" id="about-it" style="color: inherit; text-decoration: none;">
 					<h2>About it</h2>
 				</a>
