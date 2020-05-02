@@ -18,6 +18,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -56,7 +57,7 @@ export const useMutation = createUseMutation<Mutation>({
   endpoint,
   schema,
 });
-export const useQuery = createUseQuery<Query>({
+export const { useQuery, prepareQuery } = createUseQuery<Query>({
   endpoint,
   schema,
 });
@@ -102,6 +103,8 @@ const Component = () => {
 - Automatic refetch on variables change
 - Shared hooks pool through unique identifiers (_hookId_ hook option), available via **onCompleted** and **fetchMore** event on every hook.
 - Support for **Pagination** with a **fetchMore** callback.
+- Server side rendering support _(with usage examples for **Next.js**)_
+- Prefetching support
 
 ## Docs and API Reference
 
@@ -428,6 +431,57 @@ useQuery((schema) => {
   );
 });
 ```
+
+### **prepareQuery** _(SSR, prefetching, type-safety)_
+
+You can use **prepareQuery** generated from **createUseQuery**, in which you give it a `unique cache identifier` and the `schema -> query` function, and it returns an object containing the `query` function, the `cacheId`, the async function `prepare`, a React Cache Hydration Hook `useHydrateCache` and a TypeScript-only `dataType` helper.
+
+Keep in mind that the example as follows uses **prepare** as a **SSR** helper, but you could also use it client side for **prefetching**, and/or use the **checkCache** boolean argument option.
+
+> This example is using [**Next.js getServerSideProps**](https://nextjs.org/docs/basic-features/data-fetching#getserversideprops-server-side-rendering), but follows the same API for [**getStaticProps**](https://nextjs.org/docs/basic-features/data-fetching#getstaticprops-static-generation) or any other implementation.
+
+```ts
+import { NextPage, GetServerSideProps } from 'next';
+import { prepareQuery, useQuery } from '../src/graphql';
+
+const HelloQuery = prepareQuery({
+  cacheId: 'helloWorld',
+  query: (schema) => {
+    return schema.hello({ arg: 'world' });
+  },
+});
+
+interface HelloWorldProps {
+  helloWorld: typeof HelloQuery.dataType;
+}
+
+export const getServerSideProps: GetServerSideProps<HelloWorldProps> = async () => {
+  const helloWorld = await HelloQuery.prepare();
+
+  return {
+    props: {
+      helloWorld,
+    },
+  };
+};
+
+const HelloPage: NextPage<HelloWorldProps> = (props) => {
+  // This hydrates the cache and prevents network requests.
+  HelloQuery.useHydrateCache(props.helloWorld);
+
+  const [{ data }] = useQuery(HelloQuery.query, {
+    sharedCacheId: HelloQuery.cacheId,
+  });
+
+  return <div>{JSON.stringify(data, null, 2)}</div>;
+};
+```
+
+## Fully featured examples
+
+- [Blog administration panel](https://github.com/PabloSzx/Innov-UACh-Blog/tree/master/pages/admin) inside a **Next.js** / **Nexus** / **Mongoose** / **gqless-hooks** project.
+
+- [Next.js | Prisma 2 | Nexus | gqless-hooks project template](https://github.com/PabloSzx/next-prisma-gqless-nexus).
 
 ## About it
 

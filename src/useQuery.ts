@@ -259,6 +259,7 @@ export interface QueryOptions<
  *
  * `Example in Next.js`
  * @example
+ * ```ts
  * const HelloQuery = prepareQuery({
  *    cacheId: "helloWorld",
  *    query: (schema) => {
@@ -290,6 +291,7 @@ export interface QueryOptions<
  *
  *    return <div>{JSON.stringify(data, null, 2)}</div>
  * }
+ * ```
  */
 type PrepareQuery<Query> = <TData, TVariables extends Record<string, unknown>>({
   cacheId,
@@ -379,7 +381,16 @@ export const createUseQuery = <
   Schema extends { Query: ObjectNode } = { Query: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>
-): { useQuery: UseQuery<Query>; prepareQuery: PrepareQuery<Query> } => {
+): {
+  /**
+   * useQuery hook
+   */
+  useQuery: UseQuery<Query>;
+  /**
+   * prepareQuery
+   */
+  prepareQuery: PrepareQuery<Query>;
+} => {
   const {
     endpoint,
     schema,

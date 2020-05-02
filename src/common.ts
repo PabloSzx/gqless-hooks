@@ -97,6 +97,8 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    * using **declare global interface gqlessHooksPool**
    * anywhere in your application
    * @example
+   *
+   * ```ts
    * declare global {
    *    interface gqlessHooksPool {
    *     query1: {
@@ -110,6 +112,7 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    *     };
    *   }
    * }
+   * ```
    */
   hookId?: keyof gqlessHooksPool;
 }
@@ -386,6 +389,7 @@ declare global {
    *
    * `Please follow this example type signature.`
    * @example
+   * ```ts
    * declare global {
    *    interface gqlessHooksPool {
    *     query1: {
@@ -399,6 +403,7 @@ declare global {
    *     };
    *   }
    * }
+   * ```
    */
   interface gqlessHooksPool {}
 
@@ -410,6 +415,7 @@ declare global {
    * exported from `"gqless-hooks"`.
    *
    * @example
+   * ```ts
    * import { setCacheData } from "gqless-hooks";
    *
    * declare global {
@@ -421,6 +427,7 @@ declare global {
    * // ...
    *
    * setCacheData("cacheKey", ["hello", "world"]);
+   * ```
    */
   interface gqlessSharedCache extends Record<string, any> {}
 }
@@ -634,11 +641,14 @@ export const SharedCache = {
  * it's types following the example
  *
  * @example
+ *
+ * ```ts
  * declare global {
  *   interface gqlessSharedCache {
  *     anyCacheKey: string[]
  *   }
  * }
+ * ```
  */
 export const setCacheData = <Key extends keyof gqlessSharedCache>(
   cacheKey: Key,
