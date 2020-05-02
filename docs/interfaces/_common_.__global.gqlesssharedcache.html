@@ -80,14 +80,17 @@
 					exported from <code>&quot;gqless-hooks&quot;</code>.</p>
 					<dl class="tsd-comment-tags">
 						<dt>example</dt>
-						<dd><p>import { setCacheData } from &quot;gqless-hooks&quot;;</p>
-							<p>declare global {
-								interface gqlessSharedCache {
-								cacheKey: string[];
-								}
-							}</p>
-							<p>// ...</p>
-							<p>setCacheData(&quot;cacheKey&quot;, [&quot;hello&quot;, &quot;world&quot;]);</p>
+						<dd><pre><code class="language-ts"><span class="hljs-keyword">import</span> { setCacheData } <span class="hljs-keyword">from</span> <span class="hljs-string">"gqless-hooks"</span>;
+
+<span class="hljs-keyword">declare</span> global {
+  <span class="hljs-keyword">interface</span> gqlessSharedCache {
+    cacheKey: <span class="hljs-built_in">string</span>[];
+  }
+}
+
+<span class="hljs-comment">// ...</span>
+
+setCacheData(<span class="hljs-string">"cacheKey"</span>, [<span class="hljs-string">"hello"</span>, <span class="hljs-string">"world"</span>]);</code></pre>
 						</dd>
 					</dl>
 				</div>

@@ -26,7 +26,7 @@
     "prepublishOnly": "tsdx build",
     "start": "tsdx watch",
     "test": "tsdx test",
-    "typedoc": "typedoc && touch docs/.nojekyll"
+    "typedoc": "typedoc && touch ./docs/.nojekyll"
   },
   "husky": {
     "hooks": {

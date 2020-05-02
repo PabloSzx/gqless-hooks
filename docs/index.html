@@ -90,6 +90,7 @@ npm install gqless-hooks</code></pre>
 							<li><a href="#shared-cache-and-in-memory-persistence">Shared cache and in memory persistence</a></li>
 							<li><a href="#hooks-pool">Hooks pool</a></li>
 							<li><a href="#pagination">Pagination</a></li>
+							<li><a href="#getaccessorfields--getarrayaccessorfields">getAccessorFields | getArrayAccessorFields</a></li>
 						</ul>
 					</li>
 					<li><a href="#about-it">About it</a></li>
@@ -116,7 +117,7 @@ npm install gqless-hooks</code></pre>
   endpoint,
   schema,
 });
-<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> useQuery = createUseQuery&lt;Query&gt;({
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> { useQuery, prepareQuery } = createUseQuery&lt;Query&gt;({
   endpoint,
   schema,
 });</code></pre>
@@ -158,6 +159,8 @@ npm install gqless-hooks</code></pre>
 					<li>Automatic refetch on variables change</li>
 					<li>Shared hooks pool through unique identifiers (<em>hookId</em> hook option), available via <strong>onCompleted</strong> and <strong>fetchMore</strong> event on every hook.</li>
 					<li>Support for <strong>Pagination</strong> with a <strong>fetchMore</strong> callback.</li>
+					<li>Server side rendering support <em>(with usage examples for <strong>Next.js</strong>)</em></li>
+					<li>Prefetching support</li>
 				</ul>
 				<a href="#docs-and-api-reference" id="docs-and-api-reference" style="color: inherit; text-decoration: none;">
 					<h2>Docs and API Reference</h2>
@@ -449,6 +452,57 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
     <span class="hljs-string">'publishedData'</span>
   );
 });</code></pre>
+				<a href="#preparequery-ssr-prefetching-type-safety" id="preparequery-ssr-prefetching-type-safety" style="color: inherit; text-decoration: none;">
+					<h3><strong>prepareQuery</strong> <em>(SSR, prefetching, type-safety)</em></h3>
+				</a>
+				<p>You can use <strong>prepareQuery</strong> generated from <strong>createUseQuery</strong>, in which you give it a <code>unique cache identifier</code> and the <code>schema -&gt; query</code> function, and it returns an object containing the <code>query</code> function, the <code>cacheId</code>, the async function <code>prepare</code>, a React Cache Hydration Hook <code>useHydrateCache</code> and a TypeScript-only <code>dataType</code> helper.</p>
+				<p>Keep in mind that the example as follows uses <strong>prepare</strong> as a <strong>SSR</strong> helper, but you could also use it client side for <strong>prefetching</strong>, and/or use the <strong>checkCache</strong> boolean argument option.</p>
+				<blockquote>
+					<p>This example is using <a href="https://nextjs.org/docs/basic-features/data-fetching#getserversideprops-server-side-rendering"><strong>Next.js getServerSideProps</strong></a>, but follows the same API for <a href="https://nextjs.org/docs/basic-features/data-fetching#getstaticprops-static-generation"><strong>getStaticProps</strong></a> or any other implementation.</p>
+				</blockquote>
+				<pre><code class="language-ts"><span class="hljs-keyword">import</span> { NextPage, GetServerSideProps } <span class="hljs-keyword">from</span> <span class="hljs-string">'next'</span>;
+<span class="hljs-keyword">import</span> { prepareQuery, useQuery } <span class="hljs-keyword">from</span> <span class="hljs-string">'../src/graphql'</span>;
+
+<span class="hljs-keyword">const</span> HelloQuery = prepareQuery({
+  cacheId: <span class="hljs-string">'helloWorld'</span>,
+  query: <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
+    <span class="hljs-keyword">return</span> schema.hello({ arg: <span class="hljs-string">'world'</span> });
+  },
+});
+
+<span class="hljs-keyword">interface</span> HelloWorldProps {
+  helloWorld: <span class="hljs-keyword">typeof</span> HelloQuery.dataType;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> getServerSideProps: GetServerSideProps&lt;HelloWorldProps&gt; = <span class="hljs-keyword">async</span> () =&gt; {
+  <span class="hljs-keyword">const</span> helloWorld = <span class="hljs-keyword">await</span> HelloQuery.prepare();
+
+  <span class="hljs-keyword">return</span> {
+    props: {
+      helloWorld,
+    },
+  };
+};
+
+<span class="hljs-keyword">const</span> HelloPage: NextPage&lt;HelloWorldProps&gt; = <span class="hljs-function">(<span class="hljs-params">props</span>) =&gt;</span> {
+  <span class="hljs-comment">// This hydrates the cache and prevents network requests.</span>
+  HelloQuery.useHydrateCache(props.helloWorld);
+
+  <span class="hljs-keyword">const</span> [{ data }] = useQuery(HelloQuery.query, {
+    sharedCacheId: HelloQuery.cacheId,
+  });
+
+  <span class="hljs-keyword">return</span> &lt;div&gt;{<span class="hljs-built_in">JSON</span>.stringify(data, <span class="hljs-literal">null</span>, <span class="hljs-number">2</span>)}&lt;/div&gt;;
+};</code></pre>
+				<a href="#fully-featured-examples" id="fully-featured-examples" style="color: inherit; text-decoration: none;">
+					<h2>Fully featured examples</h2>
+				</a>
+				<ul>
+					<li><p><a href="https://github.com/PabloSzx/Innov-UACh-Blog/tree/master/pages/admin">Blog administration panel</a> inside a <strong>Next.js</strong> / <strong>Nexus</strong> / <strong>Mongoose</strong> / <strong>gqless-hooks</strong> project.</p>
+					</li>
+					<li><p><a href="https://github.com/PabloSzx/next-prisma-gqless-nexus">Next.js | Prisma 2 | Nexus | gqless-hooks project template</a>.</p>
+					</li>
+				</ul>
 				<a href="#about-it" id="about-it" style="color: inherit; text-decoration: none;">
 					<h2>About it</h2>
 				</a>
