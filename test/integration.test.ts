@@ -111,7 +111,7 @@ describe('basic usage and cache', () => {
         expect(nRenderFirst.renders.n).toBe(2);
 
         expect(result.current[0].fetchState).toBe('done');
-      }, 500);
+      }, 3500);
     });
 
     expect(nRenderFirst.renders.n).toBe(2);
@@ -370,6 +370,14 @@ describe('detect variables change', () => {
   });
 });
 
+declare global {
+  interface gqlessHooksPool {
+    mutation: {
+      data: string;
+    };
+  }
+}
+
 describe('multiple hooks usage and cache', () => {
   test('array push and reset', async () => {
     let completedMutation1 = false;
@@ -478,6 +486,53 @@ describe('multiple hooks usage and cache', () => {
       );
     }, 500);
   }, 10000);
+
+  it('mutation updates query', async () => {
+    const hook = renderHook(() => {
+      const sharedCacheId = 'cacheUpdateHook';
+      const query = useQuery(
+        (schema) => {
+          return schema.hello({
+            name: 'asd',
+          });
+        },
+        {
+          sharedCacheId,
+        }
+      );
+      const mutation = useMutation(
+        (schema) => {
+          return schema.helloMutation({
+            arg1: 'asd',
+          });
+        },
+        {
+          hookId: 'mutation',
+          sharedCacheId,
+        }
+      );
+
+      return {
+        query,
+        mutation,
+      };
+    });
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(hook.result.current.query[0].fetchState).toBe('done');
+      }, 1000);
+    });
+    expect(hook.result.current.query[0].data).toBe('query asd!');
+
+    await act(async () => {
+      const data = await hook.result.current.mutation[0]();
+      expect(data).toBe('mutation asd');
+    });
+
+    expect(hook.result.current.mutation[1].data).toBe('mutation asd');
+    expect(hook.result.current.query[0].data).toBe('mutation asd');
+  });
 });
 
 describe('pagination', () => {
@@ -488,6 +543,7 @@ describe('pagination', () => {
           return loremIpsumPagination({ skip, limit }).map((v) => v);
         },
         {
+          sharedCacheId: 'fetchMoreCacheId',
           onCompleted(data) {},
           variables: {
             limit: 5,
@@ -953,5 +1009,86 @@ describe('prepare query', () => {
     });
 
     expect(preparedDataCache).toBe('query prepared!');
+  });
+
+  it('prepareQuery hydrate cache', () => {
+    const preparedQueryHydrate = prepareQuery({
+      cacheId: 'cacheHydrate',
+      query: (schema) => {
+        return schema.hello({
+          name: 'mmm',
+        });
+      },
+    });
+
+    const hookHydrate = renderHook(() => {
+      preparedQueryHydrate.useHydrateCache('hello mmm!');
+      return useQuery(preparedQueryHydrate.query, {
+        sharedCacheId: preparedQueryHydrate.cacheId,
+      });
+    });
+
+    expect(hookHydrate.result.current[0].data).toBe('hello mmm!');
+  });
+});
+
+describe('polling', () => {
+  it('pollInterval should work', async () => {
+    const hook = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.currentSeconds;
+        },
+        {
+          pollInterval: 100,
+        }
+      );
+    });
+
+    let lastTimeSeconds: number | undefined;
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(hook.result.current[0].fetchState).toBe('done');
+      }, 2000);
+    });
+
+    const hookResult = hook.result.current[0].data;
+    expect(hookResult).toBeTruthy();
+    if (hookResult) lastTimeSeconds = hookResult;
+    expect(lastTimeSeconds).toBeGreaterThan(1);
+
+    await act(async () => {
+      await waitForExpect(() => {
+        const hookResult = hook.result.current[0].data;
+        const expectedNew = (lastTimeSeconds ?? 0) + 1;
+
+        expect(hookResult).toBe(expectedNew);
+        if (hookResult) lastTimeSeconds = hookResult;
+      }, 2000);
+    });
+    expect(lastTimeSeconds).toBeGreaterThan(1);
+
+    await act(async () => {
+      await waitForExpect(() => {
+        const hookResult = hook.result.current[0].data;
+        const expectedNew = (lastTimeSeconds ?? 0) + 1;
+
+        expect(hookResult).toBe(expectedNew);
+        if (hookResult) lastTimeSeconds = hookResult;
+      }, 2000);
+    });
+    expect(lastTimeSeconds).toBeGreaterThan(1);
+
+    await act(async () => {
+      await waitForExpect(() => {
+        const hookResult = hook.result.current[0].data;
+        const expectedNew = (lastTimeSeconds ?? 0) + 1;
+
+        expect(hookResult).toBe(expectedNew);
+        if (hookResult) lastTimeSeconds = hookResult;
+      }, 2000);
+    });
+
+    expect(lastTimeSeconds).toBeGreaterThan(1);
   });
 });

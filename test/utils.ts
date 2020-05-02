@@ -17,3 +17,7 @@ export const useWhatChanged = (props: Record<string, any>) => {
   }
   oldPropsChanged.current = props;
 };
+
+export const getCurrentSeconds = () => {
+  return Math.floor(Date.now() / 1000);
+};

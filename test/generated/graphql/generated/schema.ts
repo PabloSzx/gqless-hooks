@@ -56,6 +56,9 @@ export const schema = {
             false
           );
         },
+        get currentSeconds() {
+          return new FieldNode(schema.Int, undefined, false);
+        },
         get loremIpsum() {
           return new FieldNode(
             new ArrayNode(schema.String, false),

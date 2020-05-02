@@ -46,6 +46,7 @@ export interface NexusGenFieldTypes {
     fieldB: string; // String!
   }
   Query: { // field return type
+    currentSeconds: number; // Int!
     hello: string; // String!
     listObject: NexusGenRootTypes['ObjectA'][]; // [ObjectA!]!
     loremIpsum: string[]; // [String!]!

@@ -13,6 +13,7 @@ type ObjectA {
 }
 
 type Query {
+  currentSeconds: Int!
   hello(name: String!): String!
   listObject: [ObjectA!]!
   loremIpsum: [String!]!

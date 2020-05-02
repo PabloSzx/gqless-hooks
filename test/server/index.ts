@@ -6,15 +6,16 @@ import { resolve } from 'path';
 import wait from 'waait';
 
 import {
+  arg,
   makeSchema,
   mutationType,
+  objectType,
   queryType,
   stringArg,
-  arg,
-  objectType,
 } from '@nexus/schema';
 
 import { NODE_ENV } from '../../src/common';
+import { getCurrentSeconds } from '../utils';
 
 const app = express();
 
@@ -88,6 +89,12 @@ const Query = queryType({
         return `query ${name}!`;
       },
     });
+    t.int('currentSeconds', {
+      resolve() {
+        return getCurrentSeconds();
+      },
+    });
+
     t.list.string('loremIpsum', {
       nullable: false,
       async resolve() {

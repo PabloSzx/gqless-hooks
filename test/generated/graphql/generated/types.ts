@@ -25,6 +25,7 @@ type t_Query = FieldsType<
       t_String[]
     >;
     hello: FieldsTypeArg<{ name: string }, t_String>;
+    currentSeconds: t_Int;
     loremIpsum: t_String[];
   },
   Extension<'Query'>
