@@ -11,6 +11,7 @@ import {
   queryType,
   stringArg,
   arg,
+  objectType,
 } from '@nexus/schema';
 
 import { NODE_ENV } from '../../src/common';
@@ -29,8 +30,40 @@ const randomDelay = async () => {
   await wait(Math.round(Math.random() * 300) + 50);
 };
 
+const ObjectA = objectType({
+  name: 'ObjectA',
+  definition(t) {
+    t.string('fieldA');
+    t.string('fieldB');
+  },
+});
+
 const Query = queryType({
   definition(t) {
+    t.field('objectA', {
+      type: 'ObjectA',
+      resolve() {
+        return {
+          fieldA: 'asd',
+          fieldB: 'zxc',
+        };
+      },
+    });
+    t.list.field('listObject', {
+      type: 'ObjectA',
+      resolve() {
+        return [
+          {
+            fieldA: 'asd',
+            fieldB: 'zxc',
+          },
+          {
+            fieldA: 'qwe',
+            fieldB: 'ghj',
+          },
+        ];
+      },
+    });
     t.list.string('loremIpsumPagination', {
       args: {
         limit: arg({
@@ -88,7 +121,7 @@ const Mutation = mutationType({
 });
 
 const schema = makeSchema({
-  types: [Query, Mutation] as any,
+  types: [Query, Mutation, ObjectA],
   outputs: {
     schema: resolve(__dirname, '../generated/schema.graphql'),
     typegen: resolve(__dirname, '../generated/typings.ts'),

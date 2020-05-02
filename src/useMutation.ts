@@ -134,6 +134,13 @@ export const createUseMutation = <
     const stateRef = useRef(state);
     stateRef.current = state;
 
+    const isDismounted = useRef(false);
+    useEffect(() => {
+      return () => {
+        isDismounted.current = true;
+      };
+    }, []);
+
     const fetchMutation = useFetchCallback<TData, TVariables>({
       dispatch,
       endpoint,
@@ -145,6 +152,7 @@ export const createUseMutation = <
       optionsRef,
       stateRef,
       notifyOnNetworkStatusChangeRef,
+      isDismounted,
     });
 
     const mutationCallback = useCallback<

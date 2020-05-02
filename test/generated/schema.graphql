@@ -7,8 +7,15 @@ type Mutation {
   resetLoremIpsum: [String!]!
 }
 
+type ObjectA {
+  fieldA: String!
+  fieldB: String!
+}
+
 type Query {
   hello(name: String!): String!
+  listObject: [ObjectA!]!
   loremIpsum: [String!]!
   loremIpsumPagination(limit: Int!, skip: Int!): [String!]!
+  objectA: ObjectA!
 }

@@ -15,6 +15,16 @@ export const schema = {
   get Query() {
     return new ObjectNode(
       {
+        get objectA() {
+          return new FieldNode(schema.ObjectA, undefined, false);
+        },
+        get listObject() {
+          return new FieldNode(
+            new ArrayNode(schema.ObjectA, false),
+            undefined,
+            false
+          );
+        },
         get loremIpsumPagination() {
           return new FieldNode(
             new ArrayNode(schema.String, false),
@@ -57,16 +67,29 @@ export const schema = {
       { name: 'Query', extension: ((extensions as any) || {}).Query }
     );
   },
-  get Int() {
-    return new ScalarNode({
-      name: 'Int',
-      extension: ((extensions as any) || {}).Int,
-    });
+  get ObjectA() {
+    return new ObjectNode(
+      {
+        get fieldA() {
+          return new FieldNode(schema.String, undefined, false);
+        },
+        get fieldB() {
+          return new FieldNode(schema.String, undefined, false);
+        },
+      },
+      { name: 'ObjectA', extension: ((extensions as any) || {}).ObjectA }
+    );
   },
   get String() {
     return new ScalarNode({
       name: 'String',
       extension: ((extensions as any) || {}).String,
+    });
+  },
+  get Int() {
+    return new ScalarNode({
+      name: 'Int',
+      extension: ((extensions as any) || {}).Int,
     });
   },
   get Mutation() {

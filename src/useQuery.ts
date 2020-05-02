@@ -342,7 +342,7 @@ type PrepareQuery<Query> = <TData, TVariables extends Record<string, unknown>>({
      * By default it's **false**
      */
     checkCache?: boolean;
-  }) => Promise<TData>;
+  }) => Promise<TData> | TData;
   /**
    * Gives back the query function.
    *
@@ -419,6 +419,13 @@ export const createUseQuery = <
     const stateRef = useRef(state);
     stateRef.current = state;
 
+    const isDismounted = useRef(false);
+    useEffect(() => {
+      return () => {
+        isDismounted.current = true;
+      };
+    }, []);
+
     const fetchQuery = useFetchCallback<TData, TVariables>({
       dispatch,
       endpoint,
@@ -430,6 +437,7 @@ export const createUseQuery = <
       optionsRef,
       stateRef,
       notifyOnNetworkStatusChangeRef,
+      isDismounted,
     });
 
     const initialQueryClient = useMemo(() => {
@@ -532,7 +540,7 @@ export const createUseQuery = <
               return dataValue;
             }
 
-            if (shouldDispatchData) {
+            if (shouldDispatchData && !isDismounted.current) {
               dispatch({
                 type: 'done',
                 payload: dataValue,
@@ -566,6 +574,7 @@ export const createUseQuery = <
             ) {
               if (
                 shouldDispatchData &&
+                !isDismounted.current &&
                 stringifyIfNeeded(stateRef.current.data) !==
                   stringifyIfNeeded(dataValue)
               ) {
@@ -598,7 +607,7 @@ export const createUseQuery = <
             dataValue = query(client.query, variables);
           }
 
-          if (shouldDispatchData) {
+          if (shouldDispatchData && !isDismounted.current) {
             dispatch({
               type: 'done',
               payload: dataValue,
@@ -626,6 +635,8 @@ export const createUseQuery = <
 
     const queryCallbackRef = useRef(queryCallback);
     queryCallbackRef.current = queryCallback;
+
+    const isFirstMountRef = useRef(true);
 
     /**
      * Auto first hook call
@@ -699,8 +710,6 @@ export const createUseQuery = <
 
       return;
     }, [pollInterval]);
-
-    const isFirstMountRef = useRef(true);
 
     const serializedVariables = variables ? JSON.stringify(variables) : '';
 
@@ -786,11 +795,12 @@ export const createUseQuery = <
             stateRef.current.fetchState !== 'done' ||
             data !== stateRef.current.data
           ) {
-            dispatch({
-              type: 'done',
-              payload: data,
-              stateRef,
-            });
+            if (!isDismounted.current)
+              dispatch({
+                type: 'done',
+                payload: data,
+                stateRef,
+              });
 
             if (optionsRef.current.sharedCacheId) {
               SharedCache.setCacheData(
@@ -837,12 +847,15 @@ export const createUseQuery = <
           },
           state: stateRef,
           setData: (data) => {
-            dispatch({
-              type: 'setData',
-              payload:
-                typeof data === 'function' ? data(stateRef.current.data) : data,
-              stateRef,
-            });
+            if (!isDismounted.current)
+              dispatch({
+                type: 'setData',
+                payload:
+                  typeof data === 'function'
+                    ? data(stateRef.current.data)
+                    : data,
+                stateRef,
+              });
           },
         });
       }
@@ -887,14 +900,15 @@ export const createUseQuery = <
       headers?: Headers;
       variables?: TVariables;
       checkCache?: boolean;
-    } = defaultEmptyObject) =>
-      new Promise<TData>(async (resolve, reject) => {
-        if (checkCache) {
-          const cacheData = SharedCache.cacheData[cacheId];
-          if (cacheData) {
-            return resolve(cacheData);
-          }
+    } = defaultEmptyObject) => {
+      if (checkCache) {
+        const cacheData: TData = SharedCache.cacheData[cacheId];
+        if (cacheData != null) {
+          return cacheData;
         }
+      }
+
+      return new Promise<TData>(async (resolve, reject) => {
         const fetchQuery: QueryFetcher = async (query, variables) => {
           const response = await fetch(endpoint, {
             method: 'POST',
@@ -964,6 +978,7 @@ export const createUseQuery = <
 
         resolve(data);
       });
+    };
 
     const dataType: TData = (undefined as unknown) as TData;
     const useHydrateCache = (data: TData) => {

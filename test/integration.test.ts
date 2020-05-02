@@ -8,8 +8,18 @@ import {
   renderHook,
 } from '@testing-library/react-hooks';
 
-import { IS_NOT_PRODUCTION, SharedCache, setCacheData } from '../src/common';
-import { useMutation, useQuery } from './generated/graphql/client';
+import {
+  IS_NOT_PRODUCTION,
+  SharedCache,
+  setCacheData,
+  getAccessorFields,
+  getArrayAccessorFields,
+} from '../src/common';
+import {
+  useMutation,
+  useQuery,
+  prepareQuery,
+} from './generated/graphql/client';
 import {
   close,
   isClosed,
@@ -206,13 +216,20 @@ describe('basic usage and cache', () => {
 
   test('mutation works', async () => {
     const { result } = renderHook(() => {
-      const hook = useMutation(({ helloMutation }) => {
-        const result = helloMutation({
-          arg1: 'zxc',
-        });
+      const hook = useMutation(
+        ({ helloMutation }) => {
+          const result = helloMutation({
+            arg1: 'zxc',
+          });
 
-        return result;
-      }, {});
+          return result;
+        },
+        {
+          headers: {
+            a: 1,
+          },
+        }
+      );
 
       return hook;
     });
@@ -778,6 +795,9 @@ describe('manual cache manipulation', () => {
           sharedCacheId,
           skip,
           fetchPolicy: 'cache-first',
+          headers: {
+            a: 1,
+          },
         }
       );
 
@@ -833,5 +853,105 @@ describe('manual cache manipulation', () => {
     expect(queryCacheFirstSkip.result.current.query[0].data).toBe(
       loremString + '_string_concat'
     );
+  });
+});
+
+describe('utility functions', () => {
+  it('getAccessorFields works as intended', async () => {
+    const query = renderHook(() => {
+      return useQuery((schema) => {
+        return getAccessorFields(schema.objectA, 'fieldA', 'fieldB');
+      });
+    });
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(query.result.current[0].fetchState).toBe('done');
+      }, 1000);
+    });
+
+    expect(query.result.current[0].data).toEqual({
+      fieldA: 'asd',
+      fieldB: 'zxc',
+    });
+  });
+
+  it('getArrayAccessorFields works as intended', async () => {
+    const query = renderHook(() => {
+      return useQuery((schema) => {
+        return getArrayAccessorFields(schema.listObject, 'fieldA', 'fieldB');
+      });
+    });
+
+    await act(async () => {
+      await waitForExpect(() => {
+        expect(query.result.current[0].fetchState).toBe('done');
+      }, 1000);
+    });
+
+    expect(query.result.current[0].data).toEqual([
+      {
+        fieldA: 'asd',
+        fieldB: 'zxc',
+      },
+      {
+        fieldA: 'qwe',
+        fieldB: 'ghj',
+      },
+    ]);
+  });
+});
+
+describe('prepare query', () => {
+  it('prepareQuery should work', async () => {
+    const preparedQuery1 = prepareQuery({
+      cacheId: 'preparedQuery1',
+      query: (schema, { name }) => {
+        return schema.hello({
+          name,
+        });
+      },
+      variables: {
+        name: 'prepared',
+      },
+      headers: {
+        a: 1,
+      },
+    });
+
+    expect(preparedQuery1.cacheId).toBe('preparedQuery1');
+    expect(preparedQuery1.dataType).toBe(undefined);
+    expect(typeof preparedQuery1.prepare).toBe('function');
+    expect(typeof preparedQuery1.useHydrateCache).toBe('function');
+    expect(typeof preparedQuery1.query).toBe('function');
+
+    const preparedDataPromise = preparedQuery1.prepare({
+      variables: {
+        name: 'prepared',
+      },
+      headers: {
+        b: 2,
+      },
+      checkCache: true,
+    });
+
+    expect(preparedDataPromise).toBeInstanceOf(Promise);
+
+    expect(await preparedDataPromise).toBe('query prepared!');
+
+    const hook = renderHook(() => {
+      return useQuery(preparedQuery1.query, {
+        sharedCacheId: preparedQuery1.cacheId,
+      });
+    });
+
+    expect(hook.result.current[0].data).toBe(await preparedDataPromise);
+    expect(hook.result.current[0].fetchState).toBe('done');
+
+    const preparedDataCache = preparedQuery1.prepare({
+      checkCache: true,
+    });
+
+    expect(preparedDataCache).toBe('query prepared!');
   });
 });

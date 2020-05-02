@@ -21,6 +21,10 @@ export interface NexusGenEnums {
 
 export interface NexusGenRootTypes {
   Mutation: {};
+  ObjectA: { // root type
+    fieldA: string; // String!
+    fieldB: string; // String!
+  }
   Query: {};
   String: string;
   Int: number;
@@ -37,10 +41,16 @@ export interface NexusGenFieldTypes {
     helloMutation: string; // String!
     resetLoremIpsum: string[]; // [String!]!
   }
+  ObjectA: { // field return type
+    fieldA: string; // String!
+    fieldB: string; // String!
+  }
   Query: { // field return type
     hello: string; // String!
+    listObject: NexusGenRootTypes['ObjectA'][]; // [ObjectA!]!
     loremIpsum: string[]; // [String!]!
     loremIpsumPagination: string[]; // [String!]!
+    objectA: NexusGenRootTypes['ObjectA']; // ObjectA!
   }
 }
 
@@ -66,7 +76,7 @@ export interface NexusGenAbstractResolveReturnTypes {
 
 export interface NexusGenInheritedFields {}
 
-export type NexusGenObjectNames = "Mutation" | "Query";
+export type NexusGenObjectNames = "Mutation" | "ObjectA" | "Query";
 
 export type NexusGenInputNames = never;
 

@@ -256,6 +256,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   };
   stateRef: { current: IState<TData> };
   notifyOnNetworkStatusChangeRef: { current: boolean };
+  isDismounted: { current: boolean };
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
@@ -282,12 +283,17 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       type,
       creationHeaders = defaultEmptyObject,
       stateRef,
+      isDismounted,
       notifyOnNetworkStatusChangeRef: { current: shouldNotifyLoading },
     } = argsRef.current;
 
     effects.onPreEffect?.();
 
-    if (shouldNotifyLoading && stateRef.current.fetchState !== 'loading') {
+    if (
+      shouldNotifyLoading &&
+      !isDismounted.current &&
+      stateRef.current.fetchState !== 'loading'
+    ) {
       dispatch({ type: 'loading', stateRef });
     }
 
@@ -334,11 +340,12 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
 
       onError?.(errorPayload);
 
-      dispatch({
-        type: 'error',
-        payload: errorPayload,
-        stateRef,
-      });
+      if (!isDismounted.current)
+        dispatch({
+          type: 'error',
+          payload: errorPayload,
+          stateRef,
+        });
 
       if (json) return json;
 
@@ -352,11 +359,12 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
 
       onError?.(errorGraphqlError);
 
-      dispatch({
-        type: 'error',
-        payload: errorGraphqlError,
-        stateRef,
-      });
+      if (!isDismounted.current)
+        dispatch({
+          type: 'error',
+          payload: errorGraphqlError,
+          stateRef,
+        });
     } else {
       effects.onSuccessEffect?.();
     }
