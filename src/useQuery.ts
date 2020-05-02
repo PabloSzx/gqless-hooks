@@ -1,4 +1,4 @@
-import { Client, ObjectNode } from 'gqless';
+import { Client, ObjectNode, QueryFetcher } from 'gqless';
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import {
@@ -6,9 +6,12 @@ import {
   CreateOptions,
   defaultEmptyObject,
   FetchPolicy,
+  Headers,
+  HooksPool,
   IState,
   IStateReducer,
   IVariables,
+  lazyInitialState,
   logDevErrors,
   Maybe,
   SharedCache,
@@ -16,8 +19,6 @@ import {
   stringifyIfNeeded,
   useFetchCallback,
   useSubscribeCache,
-  HooksPool,
-  lazyInitialState,
 } from './common';
 
 /**
@@ -95,6 +96,7 @@ const defaultOptions = <TData, TVariables extends IVariables>(
     pollInterval = 0,
     notifyOnNetworkStatusChange = true,
     skip = false,
+    headers = defaultEmptyObject as Headers,
     ...rest
   } = options;
   return {
@@ -104,6 +106,7 @@ const defaultOptions = <TData, TVariables extends IVariables>(
     pollInterval,
     notifyOnNetworkStatusChange,
     skip,
+    headers,
     ...rest,
   };
 };
@@ -246,6 +249,129 @@ export interface QueryOptions<
 }
 
 /**
+ * Prepare Query beforehand
+ *
+ * Useful for:
+ * - Server side rendering
+ * - Improved type-safety
+ * - Prefetching queries, improving user experience
+ *
+ *
+ * `Example in Next.js`
+ * @example
+ * const HelloQuery = prepareQuery({
+ *    cacheId: "helloWorld",
+ *    query: (schema) => {
+ *       return schema.hello({ arg: "world" });
+ *    },
+ * });
+ *
+ * interface HelloWorldProps {
+ *    helloWorld: typeof HelloQuery.dataType
+ * }
+ *
+ * export const getServerSideProps: GetServerSideProps<HelloWorldProps> =
+ *  async () => {
+ *    const helloWorld = await HelloQuery.prepare();
+ *
+ *    return {
+ *        props: {
+ *           helloWorld
+ *        }
+ *    }
+ * };
+ *
+ * const HelloPage: NextPage<HelloWorldProps> = (props) => {
+ *    HelloQuery.useHydrateCache(props.helloWorld);
+ *
+ *    const [{ data }] = useQuery(HelloQuery.query, {
+ *        sharedCacheId: HelloQuery.cacheId
+ *    });
+ *
+ *    return <div>{JSON.stringify(data, null, 2)}</div>
+ * }
+ */
+type PrepareQuery<Query> = <TData, TVariables extends Record<string, unknown>>({
+  cacheId,
+  query,
+  headers: headersPrepare,
+  variables: variablesPrepare,
+  timeout,
+}: {
+  /**
+   * Shared Cache Id used for memory persistance
+   */
+  cacheId: keyof gqlessSharedCache;
+  /**
+   * Query function that returns the data from the accessors
+   */
+  query: QueryFn<Query, TData, TVariables>;
+  /**
+   * Optional add headers to the fetch query
+   */
+  headers?: Headers;
+  /**
+   * Variables for the query
+   */
+  variables?: TVariables;
+  /**
+   * Timeout in milliseconds for the fetch query, by default is 5000
+   */
+  timeout?: number;
+}) => {
+  /**
+   * Prepare the query and returns a promise of the data
+   */
+  prepare: (prepareArgs?: {
+    /**
+     * Optional add headers to the fetch query
+     *
+     * _It merges with the `prepareQuery` **headers**_
+     */
+    headers?: Headers;
+    /**
+     * Variables for the query
+     *
+     * _It merges with the `prepareQuery` **variables**_
+     */
+    variables?: TVariables;
+    /**
+     * Check if the cache already has the data before
+     * making the network request.
+     *
+     * By default it's **false**
+     */
+    checkCache?: boolean;
+  }) => Promise<TData>;
+  /**
+   * Gives back the query function.
+   *
+   * It should be used in the first parameter
+   * of **useQuery**.
+   */
+  query: typeof query;
+  /**
+   * Gives back the cacheId.
+   *
+   * It should be used in the **sharedCacheID**
+   * option in `useQuery`.
+   */
+  cacheId: typeof cacheId;
+  /**
+   * Hydrate the cache in the first mount.
+   */
+  useHydrateCache: (data: TData) => void;
+  /**
+   * Returns only the data type expected from the query
+   * function.
+   *
+   * It only works as a **TypeScript** helper, in runtime it's `undefined`,
+   * therefore it should only be used with `typeof`.
+   */
+  dataType: TData;
+};
+
+/**
  * **useQuery** constructor
  */
 export const createUseQuery = <
@@ -253,8 +379,12 @@ export const createUseQuery = <
   Schema extends { Query: ObjectNode } = { Query: ObjectNode }
 >(
   createOptions: CreateOptions<Schema>
-): UseQuery<Query> => {
-  const { endpoint, schema, creationHeaders } = createOptions;
+): { useQuery: UseQuery<Query>; prepareQuery: PrepareQuery<Query> } => {
+  const {
+    endpoint,
+    schema,
+    creationHeaders = defaultEmptyObject as Headers,
+  } = createOptions;
   const useQuery: UseQuery<Query> = <TData, TVariables extends IVariables>(
     queryFn: QueryFn<Query, any, TVariables>,
     options: QueryOptions<any, TVariables, string | number> = defaultEmptyObject
@@ -736,5 +866,123 @@ export const createUseQuery = <
     return [state, helpers];
   };
 
-  return useQuery;
+  const prepareQuery = <TData, TVariables extends IVariables>({
+    cacheId,
+    query,
+    headers: headersPrepare = defaultEmptyObject as Headers,
+    variables: variablesPrepare = defaultEmptyObject as TVariables,
+    timeout = 5000,
+  }: {
+    cacheId: keyof gqlessSharedCache;
+    query: QueryFn<Query, TData, TVariables>;
+    headers?: Headers;
+    variables?: TVariables;
+    timeout?: number;
+  }) => {
+    const prepare = ({
+      headers = defaultEmptyObject as Headers,
+      variables = defaultEmptyObject as TVariables,
+      checkCache = false,
+    }: {
+      headers?: Headers;
+      variables?: TVariables;
+      checkCache?: boolean;
+    } = defaultEmptyObject) =>
+      new Promise<TData>(async (resolve, reject) => {
+        if (checkCache) {
+          const cacheData = SharedCache.cacheData[cacheId];
+          if (cacheData) {
+            return resolve(cacheData);
+          }
+        }
+        const fetchQuery: QueryFetcher = async (query, variables) => {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              ...creationHeaders,
+              ...headersPrepare,
+              ...headers,
+            },
+            body: JSON.stringify({ query, variables }),
+            mode: 'cors',
+          });
+
+          let json: any;
+          try {
+            json = await response.json();
+          } catch (err) {}
+
+          let error: any;
+          if (!response.ok) {
+            if (json?.errors) {
+              error = json.errors;
+            } else if (Array.isArray(json)) {
+              error = json;
+            } else {
+              error = Error(
+                `Network error, received status code ${response.status} ${response.statusText}`
+              );
+            }
+          } else if (json?.errors) {
+            error = json.errors;
+          }
+
+          if (error) {
+            reject(error);
+            throw error;
+          }
+
+          return json;
+        };
+        const client = new Client<Query>(schema.Query, fetchQuery);
+
+        let variablesQuery = { ...variablesPrepare, ...variables };
+
+        let data = query(client.query, variablesQuery);
+
+        let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
+
+        if (isFetchingGqless) {
+          await new Promise<void>((fetchResolve) => {
+            const timeoutFetch = setTimeout(() => {
+              fetchResolve();
+            }, timeout);
+
+            client.scheduler.commit.onFetched.then(() => {
+              clearTimeout(timeoutFetch);
+
+              fetchResolve();
+            });
+          });
+
+          data = query(client.query, variablesQuery);
+        }
+
+        SharedCache.setCacheData(cacheId, data, null);
+
+        resolve(data);
+      });
+
+    const dataType: TData = (undefined as unknown) as TData;
+    const useHydrateCache = (data: TData) => {
+      const firstMountRef = useRef(true);
+
+      if (firstMountRef.current) {
+        firstMountRef.current = false;
+        SharedCache.setCacheData(cacheId, data, null);
+      }
+    };
+
+    return {
+      prepare,
+      query,
+      cacheId,
+      dataType,
+      useHydrateCache,
+    };
+  };
+
+  return { useQuery, prepareQuery };
 };

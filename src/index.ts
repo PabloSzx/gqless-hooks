@@ -1,9 +1,9 @@
 export { createUseMutation } from './useMutation';
 export { createUseQuery } from './useQuery';
 
+export type { Maybe, FetchPolicy } from './common';
+
 export {
-  Maybe,
-  FetchPolicy,
   setCacheData,
   getAccessorFields,
   getArrayAccessorFields,

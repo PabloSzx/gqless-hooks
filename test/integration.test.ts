@@ -522,6 +522,9 @@ describe('pagination', () => {
           limit: 40,
         },
         updateQuery(previousResult, fetchMoreResult) {
+          if (previousResult == null) return fetchMoreResult;
+          if (fetchMoreResult == null) return previousResult;
+
           return Array.from(new Set([...previousResult, ...fetchMoreResult]));
         },
         notifyLoading: false,

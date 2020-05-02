@@ -8,12 +8,12 @@ import {
   IState,
   IStateReducer,
   IVariables,
+  lazyInitialState,
   logDevErrors,
   Maybe,
   SharedCache,
   StateReducer,
   useFetchCallback,
-  lazyInitialState,
 } from './common';
 
 /**

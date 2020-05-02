@@ -1,9 +1,10 @@
 import 'isomorphic-unfetch';
 
-import { QueryFetcher } from 'gqless';
 import { GraphQLError } from 'graphql';
 import { Dispatch, Reducer, useCallback, useEffect, useRef } from 'react';
-import { QueryOptions } from 'useQuery';
+
+import type { QueryOptions } from './useQuery';
+import type { QueryFetcher } from 'gqless';
 
 /**
  * Serializable headers
@@ -701,10 +702,9 @@ export const getAccessorFields = <
  */
 export const getArrayAccessorFields = <
   TArrayValue,
-  TArray extends TArrayValue[],
   TArrayValueKeys extends keyof TArrayValue
 >(
-  accessorArray: TArray,
+  accessorArray: TArrayValue[],
   ...keys: TArrayValueKeys[]
 ) => {
   return accessorArray.map((data) => {
