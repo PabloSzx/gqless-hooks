@@ -36,6 +36,11 @@ export const NODE_ENV = process.env.NODE_ENV;
 
 export const IS_NOT_PRODUCTION = NODE_ENV !== 'production';
 
+export const IS_BROWSER = typeof window !== 'undefined';
+
+export const TIMEOUT_ERROR_MESSAGE =
+  'REQUEST TIMED OUT! You can customize the timeout limit if needed.';
+
 /**
  * Create Options needed for hook instances creation
  */
@@ -542,7 +547,7 @@ export const useSubscribeCache = (args: {
           case 'cache-first':
           case 'cache-only': {
             const cacheData = SharedCache.cacheData[sharedCacheId];
-            if (cacheData) {
+            if (cacheData !== undefined) {
               stateRef.current.called = true;
               stateRef.current.data = cacheData;
               stateRef.current.errors = undefined;
@@ -611,6 +616,10 @@ export const SharedCache = {
     }
   },
 
+  clearCacheKey: (cacheKey: keyof gqlessSharedCache) => {
+    delete SharedCache.cacheData[cacheKey];
+  },
+
   hooksPool: {} as HooksPool,
 
   subscribeHookPool: (hookId: string | number, hook: Hook<any, any>) => {
@@ -667,6 +676,13 @@ export const setCacheData = <Key extends keyof gqlessSharedCache>(
   } else {
     SharedCache.setCacheData(cacheKey, data, null);
   }
+};
+
+/**
+ * Clear a cache key in the shared cache data.
+ */
+export const clearCacheKey = (key: keyof gqlessSharedCache) => {
+  SharedCache.clearCacheKey(key);
 };
 
 /**

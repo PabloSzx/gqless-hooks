@@ -8,6 +8,7 @@ import {
   FetchPolicy,
   Headers,
   HooksPool,
+  IS_BROWSER,
   IState,
   IStateReducer,
   IVariables,
@@ -17,6 +18,7 @@ import {
   SharedCache,
   StateReducer,
   stringifyIfNeeded,
+  TIMEOUT_ERROR_MESSAGE,
   useFetchCallback,
   useSubscribeCache,
 } from './common';
@@ -563,11 +565,11 @@ export const createUseQuery = <
           }
 
           const waitForGqlessFetch = () =>
-            new Promise<void>((resolve) => {
+            new Promise<void>((resolve, reject) => {
               const timeout = setTimeout(() => {
                 isFetchingRef.current = false;
 
-                resolve();
+                reject(Error(TIMEOUT_ERROR_MESSAGE));
               }, optionsRef.current.fetchTimeout);
 
               client.scheduler.commit.onFetched.then(() => {
@@ -653,6 +655,7 @@ export const createUseQuery = <
      * Auto first hook call
      */
     if (
+      IS_BROWSER &&
       !lazy &&
       !skip &&
       !foundCache &&
@@ -914,7 +917,7 @@ export const createUseQuery = <
     } = defaultEmptyObject) => {
       if (checkCache) {
         const cacheData: TData = SharedCache.cacheData[cacheId];
-        if (cacheData != null) {
+        if (cacheData !== undefined) {
           return cacheData;
         }
       }
@@ -970,9 +973,9 @@ export const createUseQuery = <
         let isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
 
         if (isFetchingGqless) {
-          await new Promise<void>((fetchResolve) => {
+          await new Promise<void>((fetchResolve, fetchReject) => {
             const timeoutFetch = setTimeout(() => {
-              fetchResolve();
+              fetchReject(Error(TIMEOUT_ERROR_MESSAGE));
             }, timeout);
 
             client.scheduler.commit.onFetched.then(() => {

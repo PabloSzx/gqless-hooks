@@ -14,6 +14,7 @@ import {
   setCacheData,
   getAccessorFields,
   getArrayAccessorFields,
+  clearCacheKey,
 } from '../src/common';
 import {
   useMutation,
@@ -1090,5 +1091,53 @@ describe('polling', () => {
     });
 
     expect(lastTimeSeconds).toBeGreaterThan(1);
+  });
+});
+
+describe('manual cache manipulation', () => {
+  it('setCacheData, clearCacheKey and prepareQuery', () => {
+    const cacheQuery = prepareQuery({
+      cacheId: 'manualCacheManipulation',
+      query: (schema) => {
+        return schema.hello({
+          name: 'manualcache',
+        });
+      },
+    });
+    setCacheData(cacheQuery.cacheId, 'hello world!');
+
+    const hook1 = renderHook(() => {
+      return useQuery(cacheQuery.query, {
+        sharedCacheId: cacheQuery.cacheId,
+        fetchPolicy: 'cache-only',
+      });
+    });
+
+    expect(hook1.result.current[0].fetchState).toBe('done');
+    expect(hook1.result.current[0].data).toBe('hello world!');
+
+    clearCacheKey(cacheQuery.cacheId);
+
+    const hook2 = renderHook(() => {
+      return useQuery(cacheQuery.query, {
+        sharedCacheId: cacheQuery.cacheId,
+        fetchPolicy: 'cache-only',
+      });
+    });
+
+    expect(hook2.result.current[0].fetchState).toBe('done');
+    expect(hook2.result.current[0].data).toBe(null);
+
+    expect(hook1.result.current[0].fetchState).toBe('done');
+    expect(hook1.result.current[0].data).toBe('hello world!');
+
+    act(() => {
+      setCacheData(cacheQuery.cacheId, 'hello world2!');
+    });
+
+    expect(hook2.result.current[0].fetchState).toBe('done');
+    expect(hook2.result.current[0].data).toBe('hello world2!');
+    expect(hook1.result.current[0].fetchState).toBe('done');
+    expect(hook1.result.current[0].data).toBe('hello world2!');
   });
 });

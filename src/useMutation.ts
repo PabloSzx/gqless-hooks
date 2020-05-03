@@ -13,6 +13,7 @@ import {
   Maybe,
   SharedCache,
   StateReducer,
+  TIMEOUT_ERROR_MESSAGE,
   useFetchCallback,
 } from './common';
 
@@ -176,9 +177,9 @@ export const createUseMutation = <
         const isFetchingGqless = client.scheduler.commit.accessors.size !== 0;
 
         if (isFetchingGqless) {
-          await new Promise<void>((resolve) => {
+          await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
-              resolve();
+              reject(Error(TIMEOUT_ERROR_MESSAGE));
             }, optionsRef.current.fetchTimeout);
 
             client.scheduler.commit.onFetched.then(() => {
