@@ -91,8 +91,10 @@ npm install gqless-hooks</code></pre>
 							<li><a href="#hooks-pool">Hooks pool</a></li>
 							<li><a href="#pagination">Pagination</a></li>
 							<li><a href="#getaccessorfields--getarrayaccessorfields">getAccessorFields | getArrayAccessorFields</a></li>
+							<li><a href="#preparequery-ssr-prefetching-type-safety">prepareQuery (SSR, prefetching, type-safety)</a></li>
 						</ul>
 					</li>
+					<li><a href="#fully-featured-examples">Fully featured examples</a></li>
 					<li><a href="#about-it">About it</a></li>
 					<li><a href="#future">Future</a></li>
 					<li><a href="#contributing">Contributing</a></li>
@@ -453,7 +455,7 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
   );
 });</code></pre>
 				<a href="#preparequery-ssr-prefetching-type-safety" id="preparequery-ssr-prefetching-type-safety" style="color: inherit; text-decoration: none;">
-					<h3><strong>prepareQuery</strong> <em>(SSR, prefetching, type-safety)</em></h3>
+					<h3>prepareQuery (SSR, prefetching, type-safety)</h3>
 				</a>
 				<p>You can use <strong>prepareQuery</strong> generated from <strong>createUseQuery</strong>, in which you give it a <code>unique cache identifier</code> and the <code>schema -&gt; query</code> function, and it returns an object containing the <code>query</code> function, the <code>cacheId</code>, the async function <code>prepare</code>, a React Cache Hydration Hook <code>useHydrateCache</code> and a TypeScript-only <code>dataType</code> helper.</p>
 				<p>Keep in mind that the example as follows uses <strong>prepare</strong> as a <strong>SSR</strong> helper, but you could also use it client side for <strong>prefetching</strong>, and/or use the <strong>checkCache</strong> boolean argument option.</p>
@@ -555,6 +557,7 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
 		<div class="tsd-legend-group">
 			<ul class="tsd-legend">
 				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
+				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
 				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
