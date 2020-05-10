@@ -924,45 +924,47 @@ export const createUseQuery = <
 
       return new Promise<TData>(async (resolve, reject) => {
         const fetchQuery: QueryFetcher = async (query, variables) => {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              ...creationHeaders,
-              ...headersPrepare,
-              ...headers,
-            },
-            body: JSON.stringify({ query, variables }),
-            mode: 'cors',
-          });
-
-          let json: any;
           try {
-            json = await response.json();
-          } catch (err) {}
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...creationHeaders,
+                ...headersPrepare,
+                ...headers,
+              },
+              body: JSON.stringify({ query, variables }),
+              mode: 'cors',
+            });
 
-          let error: any;
-          if (!response.ok) {
-            if (json?.errors) {
+            let json: any;
+            try {
+              json = await response.json();
+            } catch (err) {}
+
+            let error: any;
+            if (!response.ok) {
+              if (json?.errors) {
+                error = json.errors;
+              } else if (Array.isArray(json)) {
+                error = json;
+              } else {
+                error = Error(
+                  `Network error, received status code ${response.status} ${response.statusText}`
+                );
+              }
+            } else if (json?.errors) {
               error = json.errors;
-            } else if (Array.isArray(json)) {
-              error = json;
-            } else {
-              error = Error(
-                `Network error, received status code ${response.status} ${response.statusText}`
-              );
             }
-          } else if (json?.errors) {
-            error = json.errors;
-          }
 
-          if (error) {
-            reject(error);
-            throw error;
-          }
+            if (error) throw error;
 
-          return json;
+            return json;
+          } catch (err) {
+            reject(err);
+            throw err;
+          }
         };
         const client = new Client<Query>(schema.Query, fetchQuery);
 
