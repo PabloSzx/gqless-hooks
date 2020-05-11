@@ -107,7 +107,6 @@
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="_usemutation_.mutationoptions.html#fetchtimeout" class="tsd-kind-icon">fetch<wbr>Timeout</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="_usemutation_.mutationoptions.html#headers" class="tsd-kind-icon">headers</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="_usemutation_.mutationoptions.html#hookid" class="tsd-kind-icon">hook<wbr>Id</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="_usemutation_.mutationoptions.html#oncompleted" class="tsd-kind-icon">on<wbr>Completed</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="_usemutation_.mutationoptions.html#onerror" class="tsd-kind-icon">on<wbr>Error</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_usemutation_.mutationoptions.html#sharedcacheid" class="tsd-kind-icon">shared<wbr>Cache<wbr>Id</a></li>
@@ -126,7 +125,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#fetchtimeout">fetchTimeout</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L85">common.ts:85</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/common.ts#L83">common.ts:83</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -142,7 +141,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#headers">headers</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L89">common.ts:89</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/common.ts#L87">common.ts:87</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -152,50 +151,13 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
-					<a name="hookid" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> hook<wbr>Id</h3>
-					<div class="tsd-signature tsd-kind-icon">hook<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">keyof </span><a href="_common_.__global.gqlesshookspool.html" class="tsd-signature-type">gqlessHooksPool</a></div>
-					<aside class="tsd-sources">
-						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#hookid">hookId</a></p>
-						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L122">common.ts:122</a></li>
-						</ul>
-					</aside>
-					<div class="tsd-comment tsd-typography">
-						<div class="lead">
-							<p><strong><em>Unique</em></strong> hook identifier used to add the hook to the <strong><em>hooks pool</em></strong> received in
-							<strong>onCompleted</strong> event and <strong>fetchMore</strong>.</p>
-						</div>
-						<p>For hooks pool usage you need to specify it&#39;s types
-							using <strong>declare global interface gqlessHooksPool</strong>
-						anywhere in your application</p>
-						<dl class="tsd-comment-tags">
-							<dt>example</dt>
-							<dd><pre><code class="language-ts"><span class="hljs-keyword">declare</span> global {
-   <span class="hljs-keyword">interface</span> gqlessHooksPool {
-    query1: {
-      data: <span class="hljs-built_in">string</span>[];
-      variables: {
-        variable1: <span class="hljs-built_in">number</span>;
-      };
-    };
-    query2: {
-      data: <span class="hljs-built_in">string</span>;
-    };
-  }
-}</code></pre>
-							</dd>
-						</dl>
-					</div>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
 					<a name="oncompleted" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> on<wbr>Completed</h3>
-					<div class="tsd-signature tsd-kind-icon">on<wbr>Completed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><a href="../modules/_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span>, hooks<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><a href="../modules/_common_.html#hookspool" class="tsd-signature-type">HooksPool</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
+					<div class="tsd-signature tsd-kind-icon">on<wbr>Completed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><a href="../modules/_common_.html#maybe" class="tsd-signature-type">Maybe</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">TData</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#oncompleted">onCompleted</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L77">common.ts:77</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/common.ts#L75">common.ts:75</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -203,9 +165,7 @@
 							<p>Event called on every successful hook call.
 							Including <strong>cache updates</strong>, <strong>setData</strong> calls, and <strong>successful network calls</strong>.</p>
 						</div>
-						<p>It first receives the resulting <strong>data</strong> of the hook call
-						and the hooks pool, identified by <strong>hookId</strong> option.</p>
-						<p>(data: Maybe<TData>, hooks: HooksPool) =&gt; void</p>
+						<p>(data: Maybe<TData>) =&gt; void</p>
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
@@ -215,7 +175,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#onerror">onError</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L81">common.ts:81</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/common.ts#L79">common.ts:79</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -230,7 +190,7 @@
 					<div class="tsd-signature tsd-kind-icon">shared<wbr>Cache<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">keyof </span><a href="_common_.__global.gqlesssharedcache.html" class="tsd-signature-type">gqlessSharedCache</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/useMutation.ts#L99">useMutation.ts:99</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/useMutation.ts#L96">useMutation.ts:96</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -249,7 +209,7 @@
 					<aside class="tsd-sources">
 						<p>Inherited from <a href="_usequery_.queryoptions.html">QueryOptions</a>.<a href="_usequery_.queryoptions.html#variables">variables</a></p>
 						<ul>
-							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/d4e48f8/src/common.ts#L96">common.ts:96</a></li>
+							<li>Defined in <a href="https://github.com/PabloSzx/gqless-hooks/blob/0ff72d2/src/common.ts#L94">common.ts:94</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -297,9 +257,6 @@
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
 								<a href="_usemutation_.mutationoptions.html#headers" class="tsd-kind-icon">headers</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_usemutation_.mutationoptions.html#hookid" class="tsd-kind-icon">hook<wbr>Id</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
 								<a href="_usemutation_.mutationoptions.html#oncompleted" class="tsd-kind-icon">on<wbr>Completed</a>

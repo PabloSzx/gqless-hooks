@@ -88,7 +88,6 @@ npm install gqless-hooks</code></pre>
 							<li><a href="#headers">Headers</a></li>
 							<li><a href="#polling">Polling</a></li>
 							<li><a href="#shared-cache-and-in-memory-persistence">Shared cache and in memory persistence</a></li>
-							<li><a href="#hooks-pool">Hooks pool</a></li>
 							<li><a href="#pagination">Pagination</a></li>
 							<li><a href="#getaccessorfields--getarrayaccessorfields">getAccessorFields | getArrayAccessorFields</a></li>
 							<li><a href="#preparequery-ssr-prefetching-type-safety">prepareQuery (SSR, prefetching, type-safety)</a></li>
@@ -159,7 +158,6 @@ npm install gqless-hooks</code></pre>
 					<li>Shared global cache.</li>
 					<li>Polling</li>
 					<li>Automatic refetch on variables change</li>
-					<li>Shared hooks pool through unique identifiers (<em>hookId</em> hook option), available via <strong>onCompleted</strong> and <strong>fetchMore</strong> event on every hook.</li>
 					<li>Support for <strong>Pagination</strong> with a <strong>fetchMore</strong> callback.</li>
 					<li>Server side rendering support <em>(with usage examples for <strong>Next.js</strong>)</em></li>
 					<li>Prefetching support</li>
@@ -302,68 +300,6 @@ useQuery(
     sharedCacheId: <span class="hljs-string">'hookKey1'</span>,
   }
 );</code></pre>
-				<a href="#hooks-pool" id="hooks-pool" style="color: inherit; text-decoration: none;">
-					<h3>Hooks pool</h3>
-				</a>
-				<p>You can also synchronize different hooks manually using the <strong>gqless &quot;<em>HooksPool</em>&quot;</strong>, available through <strong>onCompleted</strong> and <strong>fetchMore &quot;updateCache&quot;</strong> function.</p>
-				<p>Since this functionality needs more type-safety to work more safely you will need to use some <strong>type augmentation</strong>.</p>
-				<blockquote>
-					<p>For example, in any file inside your project:</p>
-				</blockquote>
-				<pre><code class="language-ts"><span class="hljs-comment">// You also could use the same generated types from gqless</span>
-<span class="hljs-keyword">declare</span> global {
-  <span class="hljs-keyword">interface</span> gqlessHooksPool {
-    query1: {
-      data: <span class="hljs-built_in">string</span>[];
-      variables: {
-        variable1: <span class="hljs-built_in">number</span>;
-      };
-    };
-    query2: {
-      data: <span class="hljs-built_in">string</span>;
-    };
-  }
-}</code></pre>
-				<p>Then you can use them</p>
-				<pre><code class="language-ts"><span class="hljs-keyword">const</span> [, { fetchMore }] = useQuery(
-  <span class="hljs-function">(<span class="hljs-params">schema</span>) =&gt;</span> {
-    <span class="hljs-comment">//...</span>
-  },
-  {
-    hookId: <span class="hljs-string">'query1'</span>,
-    onCompleted(data, hooksPool) {
-      <span class="hljs-comment">/**
-       * hooksPool ===
-       * {
-       *    query1?: {
-       *      callback: ({ variables, fetchPolicy }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
-       *      refetch: ({ variables }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
-       *      state: { current: { fetchState, data, error, called } },
-       *      setData: (data: Maybe&lt;TData&gt; | ((previousData: Maybe&lt;TData&gt;) =&gt; Maybe&lt;TData&gt;)) =&gt; void
-       *    },
-       *    query2?: {
-       *      callback: ({ variables, fetchPolicy }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
-       *      refetch: ({ variables }) =&gt; Promise&lt;Maybe&lt;TData&gt;&gt;,
-       *      state: { current: { fetchState, data, error, called } },
-       *      setData: (data: Maybe&lt;TData&gt; | ((previousData: Maybe&lt;TData&gt;) =&gt; Maybe&lt;TData&gt;)) =&gt; void
-       *    }
-       * }
-       */</span>
-    },
-  }
-);
-
-<span class="hljs-comment">// ...</span>
-
-fetchMore({
-  variables: {
-    <span class="hljs-comment">//...</span>
-  },
-  updateCache(previousData, resultData, hooksPool) {
-    <span class="hljs-comment">// hooksPool is the same as onCompleted above</span>
-    <span class="hljs-keyword">return</span> [...previousData, ...resultData];
-  },
-});</code></pre>
 				<a href="#pagination" id="pagination" style="color: inherit; text-decoration: none;">
 					<h3>Pagination</h3>
 				</a>
@@ -454,11 +390,11 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
     <span class="hljs-string">'publishedData'</span>
   );
 });</code></pre>
-				<a href="#preparequery-ssr-prefetching-type-safety" id="preparequery-ssr-prefetching-type-safety" style="color: inherit; text-decoration: none;">
-					<h3>prepareQuery (SSR, prefetching, type-safety)</h3>
+				<a href="#preparequery-ssr-prefetching-refetch-type-safety" id="preparequery-ssr-prefetching-refetch-type-safety" style="color: inherit; text-decoration: none;">
+					<h3>prepareQuery (SSR, prefetching, refetch, type-safety)</h3>
 				</a>
 				<p>You can use <strong>prepareQuery</strong> generated from <strong>createUseQuery</strong>, in which you give it a <code>unique cache identifier</code> and the <code>schema -&gt; query</code> function, and it returns an object containing the <code>query</code> function, the <code>cacheId</code>, the async function <code>prepare</code>, a React Cache Hydration Hook <code>useHydrateCache</code> and a TypeScript-only <code>dataType</code> helper.</p>
-				<p>Keep in mind that the example as follows uses <strong>prepare</strong> as a <strong>SSR</strong> helper, but you could also use it client side for <strong>prefetching</strong>, and/or use the <strong>checkCache</strong> boolean argument option.</p>
+				<p>Keep in mind that the example as follows uses <strong>prepare</strong> as a <strong>SSR</strong> helper, but you could also use it client side for <strong>prefetching</strong> or <strong>refetching</strong>, and/or use the <strong>checkCache</strong> boolean argument option.</p>
 				<blockquote>
 					<p>This example is using <a href="https://nextjs.org/docs/basic-features/data-fetching#getserversideprops-server-side-rendering"><strong>Next.js getServerSideProps</strong></a>, but follows the same API for <a href="https://nextjs.org/docs/basic-features/data-fetching#getstaticprops-static-generation"><strong>getStaticProps</strong></a> or any other implementation.</p>
 				</blockquote>
@@ -490,9 +426,7 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
   <span class="hljs-comment">// This hydrates the cache and prevents network requests.</span>
   HelloQuery.useHydrateCache(props.helloWorld);
 
-  <span class="hljs-keyword">const</span> [{ data }] = useQuery(HelloQuery.query, {
-    sharedCacheId: HelloQuery.cacheId,
-  });
+  <span class="hljs-keyword">const</span> [{ data }] = HelloQuery.useQuery();
 
   <span class="hljs-keyword">return</span> &lt;div&gt;{<span class="hljs-built_in">JSON</span>.stringify(data, <span class="hljs-literal">null</span>, <span class="hljs-number">2</span>)}&lt;/div&gt;;
 };</code></pre>
