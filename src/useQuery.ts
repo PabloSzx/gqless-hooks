@@ -20,6 +20,7 @@ import {
   TIMEOUT_ERROR_MESSAGE,
   useFetchCallback,
   useSubscribeCache,
+  setCacheData,
 } from './common';
 
 /**
@@ -381,6 +382,12 @@ type PrepareQuery<Query> = <
    * therefore it should only be used with `typeof`.
    */
   dataType: TData;
+  /**
+   * Set the cache data manually
+   */
+  setCacheData: (
+    data: Maybe<TData> | ((prevData: Maybe<TData>) => Maybe<TData>)
+  ) => void;
 };
 
 /**
@@ -993,6 +1000,13 @@ export const createUseQuery = <
           ...queryOptions,
           sharedCacheId: cacheId,
         });
+      },
+      setCacheData: (
+        data:
+          | Maybe<TPrepareData>
+          | ((prevData: Maybe<TPrepareData>) => Maybe<TPrepareData>)
+      ) => {
+        setCacheData(cacheId, data);
       },
     };
   };

@@ -364,7 +364,15 @@ useQuery((schema) => {
 
 ### prepareQuery (SSR, prefetching, refetch, type-safety)
 
-You can use **prepareQuery** generated from **createUseQuery**, in which you give it a `unique cache identifier` and the `schema -> query` function, and it returns an object containing the `query` function, the `cacheId`, the async function `prepare`, a React Cache Hydration Hook `useHydrateCache` and a TypeScript-only `dataType` helper.
+You can use **prepareQuery** generated from **createUseQuery**, in which you give it a `unique cache identifier` and the `schema -> query` function, and it returns an object containing:
+
+- The `query` function.
+- The `cacheId`.
+- An async function called `prepare`.
+- A React Cache Hydration Hook `useHydrateCache`.
+- A `useQuery` shorthand hook that already includes the _query_ and the _cacheId_.
+- A shorthand `setCacheData` function to manually update the **cache** and **hooks data**.
+- A TypeScript-only `dataType` helper.
 
 Keep in mind that the example as follows uses **prepare** as a **SSR** helper, but you could also use it client side for **prefetching** or **refetching**, and/or use the **checkCache** boolean argument option.
 

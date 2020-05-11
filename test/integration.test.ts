@@ -1297,4 +1297,29 @@ describe('prepareQuery utilities', () => {
 
     expect(hook.result.current[0].data).toBe('query 222!');
   });
+
+  it('setData', async () => {
+    const query = prepareQuery({
+      query: (schema) => {
+        return schema.hello({
+          name: 'setdata',
+        });
+      },
+      cacheId: 'prepareQuerySetData',
+    });
+
+    query.setCacheData('data1');
+
+    const hook = renderHook(() => {
+      return query.useQuery();
+    });
+
+    expect(hook.result.current[0].data).toBe('data1');
+
+    act(() => {
+      query.setCacheData((prevData) => 'data2' + prevData);
+    });
+
+    expect(hook.result.current[0].data).toBe('data2data1');
+  });
 });

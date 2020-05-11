@@ -493,6 +493,8 @@ export const SharedCache = {
     data: any,
     setter: { current?: CacheSubFn } | null
   ) => {
+    if (SharedCache.cacheData[cacheKey] === data) return;
+
     SharedCache.cacheData[cacheKey] = data;
     const cacheSubscribers = SharedCache.cacheSubscribers[cacheKey];
     const cacherSubFn = setter?.current;
