@@ -156,7 +156,7 @@ export const isListening = new Promise<void>((resolve) => {
 
 export const listeningPort = 9999;
 
-const maxTimeoutClose = 10000;
+const maxTimeoutClose = 40000;
 
 let timeoutClose: NodeJS.Timeout;
 

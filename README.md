@@ -362,11 +362,11 @@ useQuery((schema) => {
 });
 ```
 
-### prepareQuery (SSR, prefetching, type-safety)
+### prepareQuery (SSR, prefetching, refetch, type-safety)
 
 You can use **prepareQuery** generated from **createUseQuery**, in which you give it a `unique cache identifier` and the `schema -> query` function, and it returns an object containing the `query` function, the `cacheId`, the async function `prepare`, a React Cache Hydration Hook `useHydrateCache` and a TypeScript-only `dataType` helper.
 
-Keep in mind that the example as follows uses **prepare** as a **SSR** helper, but you could also use it client side for **prefetching**, and/or use the **checkCache** boolean argument option.
+Keep in mind that the example as follows uses **prepare** as a **SSR** helper, but you could also use it client side for **prefetching** or **refetching**, and/or use the **checkCache** boolean argument option.
 
 > This example is using [**Next.js getServerSideProps**](https://nextjs.org/docs/basic-features/data-fetching#getserversideprops-server-side-rendering), but follows the same API for [**getStaticProps**](https://nextjs.org/docs/basic-features/data-fetching#getstaticprops-static-generation) or any other implementation.
 

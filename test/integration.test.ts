@@ -1260,3 +1260,41 @@ describe('timeout works', () => {
     await expect(query.prepare()).rejects.toEqual(Error(TIMEOUT_ERROR_MESSAGE));
   });
 });
+
+describe('prepareQuery utilities', () => {
+  it('refetch', async () => {
+    const query = prepareQuery({
+      query: (schema, { name }: { name: string }) => {
+        return schema.hello({
+          name,
+        });
+      },
+      variables: {
+        name: '111',
+      },
+      cacheId: 'prepareQueryRefetch',
+    });
+
+    const data = await query.prepare();
+
+    expect(data).toBe('query 111!');
+
+    const hook = renderHook(() => {
+      return query.useQuery();
+    });
+
+    expect(hook.result.current[0].fetchState).toBe('done');
+    expect(hook.result.current[0].data).toBe(data);
+
+    await act(async () => {
+      const newData = await query.prepare({
+        variables: {
+          name: '222',
+        },
+      });
+      expect(newData).toBe('query 222!');
+    });
+
+    expect(hook.result.current[0].data).toBe('query 222!');
+  });
+});
