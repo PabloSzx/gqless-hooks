@@ -90,7 +90,7 @@ npm install gqless-hooks</code></pre>
 							<li><a href="#shared-cache-and-in-memory-persistence">Shared cache and in memory persistence</a></li>
 							<li><a href="#pagination">Pagination</a></li>
 							<li><a href="#getaccessorfields--getarrayaccessorfields">getAccessorFields | getArrayAccessorFields</a></li>
-							<li><a href="#preparequery-ssr-prefetching-type-safety">prepareQuery (SSR, prefetching, type-safety)</a></li>
+							<li><a href="#preparequery-ssr-prefetching-refetch-type-safety">prepareQuery (SSR, prefetching, refetch, type-safety)</a></li>
 						</ul>
 					</li>
 					<li><a href="#fully-featured-examples">Fully featured examples</a></li>
@@ -393,7 +393,16 @@ useQuery(<span class="hljs-function">(<span class="hljs-params">schema</span>) =
 				<a href="#preparequery-ssr-prefetching-refetch-type-safety" id="preparequery-ssr-prefetching-refetch-type-safety" style="color: inherit; text-decoration: none;">
 					<h3>prepareQuery (SSR, prefetching, refetch, type-safety)</h3>
 				</a>
-				<p>You can use <strong>prepareQuery</strong> generated from <strong>createUseQuery</strong>, in which you give it a <code>unique cache identifier</code> and the <code>schema -&gt; query</code> function, and it returns an object containing the <code>query</code> function, the <code>cacheId</code>, the async function <code>prepare</code>, a React Cache Hydration Hook <code>useHydrateCache</code> and a TypeScript-only <code>dataType</code> helper.</p>
+				<p>You can use <strong>prepareQuery</strong> generated from <strong>createUseQuery</strong>, in which you give it a <code>unique cache identifier</code> and the <code>schema -&gt; query</code> function, and it returns an object containing:</p>
+				<ul>
+					<li>The <code>query</code> function.</li>
+					<li>The <code>cacheId</code>.</li>
+					<li>An async function called <code>prepare</code>.</li>
+					<li>A React Cache Hydration Hook <code>useHydrateCache</code>.</li>
+					<li>A <code>useQuery</code> shorthand hook that already includes the <em>query</em> and the <em>cacheId</em>.</li>
+					<li>A shorthand <code>setCacheData</code> function to manually update the <strong>cache</strong> and <strong>hooks data</strong>.</li>
+					<li>A TypeScript-only <code>dataType</code> helper.</li>
+				</ul>
 				<p>Keep in mind that the example as follows uses <strong>prepare</strong> as a <strong>SSR</strong> helper, but you could also use it client side for <strong>prefetching</strong> or <strong>refetching</strong>, and/or use the <strong>checkCache</strong> boolean argument option.</p>
 				<blockquote>
 					<p>This example is using <a href="https://nextjs.org/docs/basic-features/data-fetching#getserversideprops-server-side-rendering"><strong>Next.js getServerSideProps</strong></a>, but follows the same API for <a href="https://nextjs.org/docs/basic-features/data-fetching#getstaticprops-static-generation"><strong>getStaticProps</strong></a> or any other implementation.</p>
