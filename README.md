@@ -29,7 +29,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
   - [Shared cache and in memory persistence](#shared-cache-and-in-memory-persistence)
   - [Pagination](#pagination)
   - [getAccessorFields | getArrayAccessorFields](#getaccessorfields--getarrayaccessorfields)
-  - [prepareQuery (SSR, prefetching, type-safety)](#preparequery-ssr-prefetching-type-safety)
+  - [prepareQuery (SSR, prefetching, refetch, type-safety)](#preparequery-ssr-prefetching-refetch-type-safety)
 - [Fully featured examples](#fully-featured-examples)
 - [About it](#about-it)
 - [Future](#future)
