@@ -1,5 +1,7 @@
+import fetchMock from 'fetch-mock';
 import { GraphQLError } from 'graphql';
 import { useState } from 'react';
+import wait from 'waait';
 import waitForExpect from 'wait-for-expect';
 
 import {
@@ -9,17 +11,18 @@ import {
 } from '@testing-library/react-hooks';
 
 import {
-  IS_NOT_PRODUCTION,
-  SharedCache,
-  setCacheData,
+  clearCacheKey,
   getAccessorFields,
   getArrayAccessorFields,
-  clearCacheKey,
+  setCacheData,
+  SharedCache,
+  TIMEOUT_ERROR_MESSAGE,
 } from '../src/common';
 import {
+  endpoint,
+  prepareQuery,
   useMutation,
   useQuery,
-  prepareQuery,
 } from './generated/graphql/client';
 import {
   close,
@@ -55,23 +58,6 @@ const renderCount = () => {
 };
 
 declare global {
-  interface gqlessHooksPool {
-    queryhello1: {
-      data: string;
-    };
-    queryhello2: {
-      data: string;
-    };
-    query1: {
-      data: string[];
-    };
-    query2: {
-      data: string[];
-    };
-  }
-}
-
-declare global {
   interface gqlessSharedCache {
     queryhello1: string;
   }
@@ -94,9 +80,8 @@ describe('basic usage and cache', () => {
         },
         {
           sharedCacheId: 'queryhello1',
-          hookId: 'queryhello1',
 
-          onCompleted: (data, hookspool) => {},
+          onCompleted: (data) => {},
         }
       );
 
@@ -136,7 +121,6 @@ describe('basic usage and cache', () => {
         },
         {
           sharedCacheId: 'queryhello1',
-          hookId: 'queryhello2',
         }
       );
 
@@ -371,14 +355,6 @@ describe('detect variables change', () => {
   });
 });
 
-declare global {
-  interface gqlessHooksPool {
-    mutation: {
-      data: string;
-    };
-  }
-}
-
 describe('multiple hooks usage and cache', () => {
   test('array push and reset', async () => {
     let completedMutation1 = false;
@@ -393,10 +369,7 @@ describe('multiple hooks usage and cache', () => {
             query1: '',
           },
           sharedCacheId: 'loremipsumarray',
-          hookId: 'query1',
-          onCompleted: (data, hookspool) => {
-            hookspool.query2;
-          },
+          onCompleted: (data) => {},
         }
       );
       const query2 = useQuery(
@@ -408,7 +381,6 @@ describe('multiple hooks usage and cache', () => {
           headers: {
             query2: '',
           },
-          hookId: 'query2',
           sharedCacheId: 'loremipsumarray',
           fetchPolicy: 'cache-and-network',
         }
@@ -508,7 +480,6 @@ describe('multiple hooks usage and cache', () => {
           });
         },
         {
-          hookId: 'mutation',
           sharedCacheId,
         }
       );
@@ -619,62 +590,6 @@ describe('pagination', () => {
       expect(result.current[0].fetchState).toBe('done');
       clearInterval(fetchStateIsAlwaysDoneInterval);
     });
-  });
-});
-
-declare global {
-  interface gqlessHooksPool {
-    duplicateHookId: {};
-  }
-}
-
-describe('warn in dev mode', () => {
-  it('warn duplicate hookId', () => {
-    const warnSpy = jest
-      .spyOn(global.console, 'warn')
-      .mockImplementation(() => {});
-
-    renderHook(() => {
-      useQuery(
-        () => {
-          return 'asd';
-        },
-        {
-          hookId: 'duplicateHookId',
-        }
-      );
-      useQuery(() => {}, {
-        hookId: 'duplicateHookId',
-      });
-    });
-
-    expect(warnSpy).toBeCalledTimes(1);
-
-    warnSpy.mockRestore();
-  });
-  it('ignore duplicate hookId on production', () => {
-    //@ts-ignore
-    IS_NOT_PRODUCTION = false;
-
-    const warnSpy = jest
-      .spyOn(global.console, 'warn')
-      .mockImplementation(() => {});
-
-    renderHook(() => {
-      useQuery(() => {}, {
-        hookId: 'duplicateHookId',
-      });
-      useQuery(() => {}, {
-        hookId: 'duplicateHookId',
-      });
-    });
-
-    expect(warnSpy).toBeCalledTimes(0);
-
-    warnSpy.mockRestore();
-
-    //@ts-ignore
-    IS_NOT_PRODUCTION = !IS_NOT_PRODUCTION;
   });
 });
 
@@ -870,8 +785,9 @@ describe('manual cache manipulation', () => {
       'waiting'
     );
 
+    expect(queryCacheFirstSkip.result.current.skip).toBe(true);
+
     act(() => {
-      expect(queryCacheFirstSkip.result.current.skip).toBe(true);
       queryCacheFirstSkip.result.current.setSkip(false);
     });
 
@@ -997,9 +913,7 @@ describe('prepare query', () => {
     expect(await preparedDataPromise).toBe('query prepared!');
 
     const hook = renderHook(() => {
-      return useQuery(preparedQuery1.query, {
-        sharedCacheId: preparedQuery1.cacheId,
-      });
+      return preparedQuery1.useQuery();
     });
 
     expect(hook.result.current[0].data).toBe(await preparedDataPromise);
@@ -1139,5 +1053,210 @@ describe('manual cache manipulation', () => {
     expect(hook2.result.current[0].data).toBe('hello world2!');
     expect(hook1.result.current[0].fetchState).toBe('done');
     expect(hook1.result.current[0].data).toBe('hello world2!');
+  });
+});
+
+describe('prepareQuery error handling', () => {
+  let errorSpy = jest.spyOn(global.console, 'error');
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
+  });
+  afterEach(async () => {
+    await wait(10);
+    errorSpy.mockRestore();
+    fetchMock.restore();
+  });
+
+  test('network status error', async () => {
+    const query = prepareQuery({
+      cacheId: 'error1',
+      query: (schema) => {
+        return schema.hello({
+          name: 'zxc',
+        });
+      },
+    });
+    fetchMock.mock(endpoint, {
+      status: 403,
+    });
+
+    await expect(query.prepare()).rejects.toThrowError(
+      'Network error, received status code 403 Forbidden'
+    );
+  });
+
+  test('graphql error invalid request', async () => {
+    const query = prepareQuery({
+      cacheId: 'error2',
+      query: (schema) => {
+        return schema.currentSeconds;
+      },
+    });
+    fetchMock.mock(endpoint, {
+      status: 400,
+      body: {
+        data: null,
+        errors: [new GraphQLError('gql_error_400')],
+      },
+    });
+
+    await expect(query.prepare()).rejects.toEqual([
+      {
+        message: 'gql_error_400',
+      },
+    ]);
+  });
+
+  test('graphql error', async () => {
+    const query = prepareQuery({
+      cacheId: 'error2',
+      query: (schema) => {
+        return schema.currentSeconds;
+      },
+    });
+    fetchMock.mock(endpoint, {
+      status: 200,
+      body: {
+        data: null,
+        errors: [new GraphQLError('any gql error')],
+      },
+    });
+
+    await expect(query.prepare()).rejects.toEqual([
+      {
+        message: 'any gql error',
+      },
+    ]);
+  });
+});
+
+describe('useQuery error handling', () => {
+  let errorSpy = jest.spyOn(global.console, 'error');
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
+  });
+  afterEach(async () => {
+    await wait(10);
+    errorSpy.mockRestore();
+    fetchMock.restore();
+  });
+
+  test('graphql error', async () => {
+    fetchMock.mock(endpoint, {
+      status: 200,
+      body: {
+        data: null,
+        errors: [new GraphQLError('gql_error')],
+      },
+    });
+    const hook = renderHook(() => {
+      return useQuery((schema) => {
+        return schema.currentSeconds;
+      });
+    });
+
+    await waitForExpect(() => {
+      expect(hook.result.current[0].fetchState).toBe('error');
+    }, 500);
+
+    expect(hook.result.current[0].data).toBeUndefined();
+    expect(hook.result.current[0].errors).toEqual([
+      new GraphQLError('gql_error'),
+    ]);
+  });
+
+  test('network error', async () => {
+    fetchMock.mock(endpoint, {
+      status: 403,
+    });
+    const hook = renderHook(() => {
+      return useQuery((schema) => {
+        return schema.currentSeconds;
+      });
+    });
+
+    await waitForExpect(() => {
+      expect(hook.result.current[0].fetchState).toBe('error');
+    }, 500);
+
+    expect(hook.result.current[0].data).toBeUndefined();
+    expect(hook.result.current[0].errors).toEqual([
+      new Error('Network error, received status code 403 Forbidden'),
+    ]);
+  });
+
+  test('fetch error', async () => {
+    fetchMock.mock(endpoint, () => {
+      throw Error('fetchError!!');
+    });
+
+    const hook = renderHook(() => {
+      return useQuery((schema) => {
+        return schema.currentSeconds;
+      });
+    });
+
+    await waitForExpect(() => {
+      expect(hook.result.current[0].fetchState).toBe('error');
+    }, 500);
+
+    expect(hook.result.current[0].data).toBeUndefined();
+    expect(hook.result.current[0].errors).toEqual([new Error('fetchError!!')]);
+  });
+});
+
+describe('timeout works', () => {
+  it('useMutation timeout', async () => {
+    const mutation = renderHook(() => {
+      return useMutation(
+        (schema) => {
+          return schema.helloMutation({
+            arg1: 'zxc',
+          });
+        },
+        {
+          fetchTimeout: 0,
+        }
+      );
+    });
+
+    await expect(mutation.result.current[0]()).rejects.toEqual(
+      Error(TIMEOUT_ERROR_MESSAGE)
+    );
+  });
+
+  it('useQuery timeout', async () => {
+    const query = renderHook(() => {
+      return useQuery(
+        (schema) => {
+          return schema.currentSeconds;
+        },
+        {
+          lazy: true,
+          fetchTimeout: 0,
+          notifyOnNetworkStatusChange: false,
+          fetchPolicy: 'cache-first',
+          sharedCacheId: 'usequerytimeout',
+        }
+      );
+    });
+
+    await expect(query.result.current[1].callback()).rejects.toEqual(
+      Error(TIMEOUT_ERROR_MESSAGE)
+    );
+  });
+
+  it('prepareQuery timeout', async () => {
+    const query = prepareQuery({
+      cacheId: 'query_timeout',
+      query: (schema) => {
+        return schema.currentSeconds;
+      },
+      fetchTimeout: 50,
+    });
+
+    await expect(query.prepare()).rejects.toEqual(Error(TIMEOUT_ERROR_MESSAGE));
   });
 });

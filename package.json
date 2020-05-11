@@ -34,8 +34,8 @@
     }
   },
   "resolutions": {
-    "@types/react": "^16.9.34",
-    "@types/react-dom": "^16.9.7"
+    "@types/react": "^16.9.35",
+    "@types/react-dom": "^16.9.8"
   },
   "dependencies": {
     "isomorphic-unfetch": "^3.0.0"
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@gqless/cli": "^0.0.1-alpha.31",
     "@nexus/schema": "^0.13.1",
-    "@testing-library/jest-dom": "^5.5.0",
+    "@testing-library/jest-dom": "^5.7.0",
     "@testing-library/react": "^10.0.4",
     "@testing-library/react-hooks": "^3.2.1",
     "@types/body-parser": "^1.19.0",
@@ -53,10 +53,10 @@
     "@types/jest": "^25.2.1",
     "@types/node-fetch": "^2.5.7",
     "@types/prettier": "^2.0.0",
-    "@types/react": "^16.9.34",
-    "@types/react-dom": "^16.9.7",
+    "@types/react": "^16.9.35",
+    "@types/react-dom": "^16.9.8",
     "@types/react-test-renderer": "^16.9.2",
-    "@types/testing-library__jest-dom": "^5.0.3",
+    "@types/testing-library__jest-dom": "^5.0.4",
     "@types/testing-library__react": "^10.0.1",
     "@types/testing-library__react-hooks": "^3.2.0",
     "@types/wait-on": "^4.0.0",
@@ -66,6 +66,7 @@
     "eslint-plugin-prettier": "^3.1.3",
     "express": "^4.17.1",
     "express-gql": "^0.0.4",
+    "fetch-mock": "^9.5.1",
     "gqless": "^0.0.1-alpha.29",
     "graphql": "^14.6.0",
     "husky": "^4.2.5",
@@ -75,14 +76,14 @@
     "react-dom": "^16.13.1",
     "react-test-renderer": "^16.13.1",
     "react-use": "^14.2.0",
-    "ts-node": "^8.9.1",
+    "ts-node": "^8.10.1",
     "tsdx": "^0.13.2",
-    "tslib": "^1.11.1",
+    "tslib": "^1.11.2",
     "typedoc": "^0.17.6",
     "typescript": "^3.8.3",
     "waait": "^1.0.5",
     "wait-for-expect": "^3.0.2",
-    "wait-on": "^4.0.2"
+    "wait-on": "^5.0.0"
   },
   "peerDependencies": {
     "gqless": "^0.0.1-alpha.29",

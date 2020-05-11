@@ -1,7 +1,7 @@
 import { schema, Query, Mutation } from './generated';
 import { createUseQuery, createUseMutation } from '../../../src';
 
-const endpoint = 'http://localhost:9999/graphql';
+export const endpoint = 'http://localhost:9999/graphql';
 
 export const { useQuery, prepareQuery } = createUseQuery<Query>({
   endpoint,

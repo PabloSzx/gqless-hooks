@@ -65,7 +65,7 @@ type MutationFn<TData, Mutation, TVariables extends IVariables> = (
 /**
  * **useMutation** data state returned from hook.
  */
-interface UseMutationState<Mutation, TData> extends IState<TData> {}
+interface UseMutationState<TData> extends IState<TData> {}
 
 /**
  * **useMutation** hook
@@ -79,10 +79,7 @@ export type UseMutation<Mutation> = <TData, TVariables extends IVariables>(
    * Optional options to give the mutation hook
    */
   options?: MutationOptions<TData, TVariables>
-) => [
-  MutationCallback<TData, Mutation, TVariables>,
-  UseMutationState<Mutation, TData>
-];
+) => [MutationCallback<TData, Mutation, TVariables>, UseMutationState<TData>];
 
 /**
  * Options of useMutation
@@ -119,9 +116,7 @@ export const createUseMutation = <
     options: MutationOptions<TData, TVariables> = defaultEmptyObject
   ) => {
     const optionsRef = useRef(options);
-    const { hookId } = ((optionsRef.current = defaultOptions(options)) as {
-      hookId?: unknown;
-    }) as { hookId?: string };
+    optionsRef.current = defaultOptions(optionsRef.current);
 
     const mutationFnRef = useRef(mutationFn);
     mutationFnRef.current = mutationFn;
@@ -135,10 +130,10 @@ export const createUseMutation = <
     const stateRef = useRef(state);
     stateRef.current = state;
 
-    const isDismounted = useRef(false);
+    const isNotDismounted = useRef(true);
     useEffect(() => {
       return () => {
-        isDismounted.current = true;
+        isNotDismounted.current = false;
       };
     }, []);
 
@@ -153,7 +148,7 @@ export const createUseMutation = <
       optionsRef,
       stateRef,
       notifyOnNetworkStatusChangeRef,
-      isDismounted,
+      isNotDismounted,
     });
 
     const mutationCallback = useCallback<
@@ -213,40 +208,6 @@ export const createUseMutation = <
     const mutationCallbackRef = useRef(mutationCallback);
     mutationCallbackRef.current = mutationCallback;
 
-    /**
-     * HooksPool effect subscription
-     */
-    useEffect(() => {
-      if (hookId != null) {
-        return SharedCache.subscribeHookPool(hookId, {
-          callback: async (args) => {
-            const variables = args?.variables as TVariables | undefined;
-
-            return await mutationCallbackRef.current({
-              variables,
-            });
-          },
-          refetch: async (args) => {
-            const variables = args?.variables as TVariables | undefined;
-
-            return await mutationCallbackRef.current({
-              variables,
-            });
-          },
-          state: stateRef,
-          setData: (data) => {
-            dispatch({
-              type: 'setData',
-              payload:
-                typeof data === 'function' ? data(stateRef.current.data) : data,
-              stateRef,
-            });
-          },
-        });
-      }
-      return;
-    }, [hookId]);
-
     const isStateDone = state.fetchState === 'done';
 
     /**
@@ -255,7 +216,7 @@ export const createUseMutation = <
     useEffect(() => {
       const onCompleted = optionsRef.current.onCompleted;
       if (isStateDone && onCompleted) {
-        onCompleted(stateRef.current.data, SharedCache.hooksPool);
+        onCompleted(stateRef.current.data);
       }
     }, [isStateDone, stateRef.current.data]);
 

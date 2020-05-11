@@ -18,6 +18,7 @@ This library creates a couple of hooks to interact with [**gqless**](https://gql
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -102,7 +103,6 @@ const Component = () => {
 - Shared global cache.
 - Polling
 - Automatic refetch on variables change
-- Shared hooks pool through unique identifiers (_hookId_ hook option), available via **onCompleted** and **fetchMore** event on every hook.
 - Support for **Pagination** with a **fetchMore** callback.
 - Server side rendering support _(with usage examples for **Next.js**)_
 - Prefetching support
@@ -265,75 +265,6 @@ useQuery(
 );
 ```
 
-### Hooks pool
-
-You can also synchronize different hooks manually using the **gqless "_HooksPool_"**, available through **onCompleted** and **fetchMore "updateCache"** function.
-
-Since this functionality needs more type-safety to work more safely you will need to use some **type augmentation**.
-
-> For example, in any file inside your project:
-
-```ts
-// You also could use the same generated types from gqless
-declare global {
-  interface gqlessHooksPool {
-    query1: {
-      data: string[];
-      variables: {
-        variable1: number;
-      };
-    };
-    query2: {
-      data: string;
-    };
-  }
-}
-```
-
-Then you can use them
-
-```ts
-const [, { fetchMore }] = useQuery(
-  (schema) => {
-    //...
-  },
-  {
-    hookId: 'query1',
-    onCompleted(data, hooksPool) {
-      /**
-       * hooksPool ===
-       * {
-       *    query1?: {
-       *      callback: ({ variables, fetchPolicy }) => Promise<Maybe<TData>>,
-       *      refetch: ({ variables }) => Promise<Maybe<TData>>,
-       *      state: { current: { fetchState, data, error, called } },
-       *      setData: (data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)) => void
-       *    },
-       *    query2?: {
-       *      callback: ({ variables, fetchPolicy }) => Promise<Maybe<TData>>,
-       *      refetch: ({ variables }) => Promise<Maybe<TData>>,
-       *      state: { current: { fetchState, data, error, called } },
-       *      setData: (data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)) => void
-       *    }
-       * }
-       */
-    },
-  }
-);
-
-// ...
-
-fetchMore({
-  variables: {
-    //...
-  },
-  updateCache(previousData, resultData, hooksPool) {
-    // hooksPool is the same as onCompleted above
-    return [...previousData, ...resultData];
-  },
-});
-```
-
 ### Pagination
 
 For pagination you can use **fetchMore** from **useQuery**, somewhat following [Apollo fetchMore](https://www.apollographql.com/docs/react/data/pagination/#using-fetchmore) API.
@@ -470,9 +401,7 @@ const HelloPage: NextPage<HelloWorldProps> = (props) => {
   // This hydrates the cache and prevents network requests.
   HelloQuery.useHydrateCache(props.helloWorld);
 
-  const [{ data }] = useQuery(HelloQuery.query, {
-    sharedCacheId: HelloQuery.cacheId,
-  });
+  const [{ data }] = HelloQuery.useQuery();
 
   return <div>{JSON.stringify(data, null, 2)}</div>;
 };

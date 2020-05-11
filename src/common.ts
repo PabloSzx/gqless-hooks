@@ -1,8 +1,8 @@
 import 'isomorphic-unfetch';
 
-import { GraphQLError } from 'graphql';
 import { Dispatch, Reducer, useCallback, useEffect, useRef } from 'react';
 
+import type { GraphQLError } from 'graphql';
 import type { QueryOptions } from './useQuery';
 import type { QueryFetcher } from 'gqless';
 
@@ -69,12 +69,10 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    * Event called on every successful hook call.
    * Including **cache updates**, **setData** calls, and **successful network calls**.
    *
-   * It first receives the resulting **data** of the hook call
-   * and the hooks pool, identified by **hookId** option.
    *
-   * (data: Maybe<TData>, hooks: HooksPool) => void
+   * (data: Maybe<TData>) => void
    */
-  onCompleted?: (data: Maybe<TData>, hooks: Readonly<HooksPool>) => void;
+  onCompleted?: (data: Maybe<TData>) => void;
   /**
    * Event called on GraphQL error on hook call.
    */
@@ -94,32 +92,6 @@ export interface CommonHookOptions<TData, TVariables extends IVariables> {
    * in **useQuery**.
    */
   variables?: TVariables;
-  /**
-   * ***Unique*** hook identifier used to add the hook to the ***hooks pool*** received in
-   * **onCompleted** event and **fetchMore**.
-   *
-   * For hooks pool usage you need to specify it's types
-   * using **declare global interface gqlessHooksPool**
-   * anywhere in your application
-   * @example
-   *
-   * ```ts
-   * declare global {
-   *    interface gqlessHooksPool {
-   *     query1: {
-   *       data: string[];
-   *       variables: {
-   *         variable1: number;
-   *       };
-   *     };
-   *     query2: {
-   *       data: string;
-   *     };
-   *   }
-   * }
-   * ```
-   */
-  hookId?: keyof gqlessHooksPool;
 }
 
 /**
@@ -187,20 +159,15 @@ export const StateReducer = <TData>(
     case 'done': {
       if (reducerState.fetchState === 'error') {
         if (
-          stringifyIfNeeded(action.payload) !==
+          stringifyIfNeeded(action.payload) ===
           stringifyIfNeeded(reducerState.data)
         ) {
-          action.stateRef.current.data = action.payload;
-
-          const newState = { ...reducerState };
-          newState.data = action.payload;
-
-          return newState;
+          return reducerState;
         }
-        return reducerState;
       }
 
       action.stateRef.current.data = action.payload;
+      action.stateRef.current.fetchState = 'done';
 
       return {
         fetchState: 'done',
@@ -264,7 +231,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
   };
   stateRef: { current: IState<TData> };
   notifyOnNetworkStatusChangeRef: { current: boolean };
-  isDismounted: { current: boolean };
+  isNotDismounted: { current: boolean };
 }) => {
   const argsRef = useRef(args);
   argsRef.current = args;
@@ -291,7 +258,7 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
       type,
       creationHeaders = defaultEmptyObject,
       stateRef,
-      isDismounted,
+      isNotDismounted,
       notifyOnNetworkStatusChangeRef: { current: shouldNotifyLoading },
     } = argsRef.current;
 
@@ -299,85 +266,84 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
 
     if (
       shouldNotifyLoading &&
-      !isDismounted.current &&
+      isNotDismounted.current &&
       stateRef.current.fetchState !== 'loading'
     ) {
       dispatch({ type: 'loading', stateRef });
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...creationHeaders,
-        ...headers,
-      },
-      body: JSON.stringify({
-        query: type !== 'query' ? type + query : query,
-        variables,
-      }),
-      mode: 'cors',
-    });
-
-    let json: any;
-
     try {
-      json = await response.json();
-    } catch (err) {
-      effects.onErrorEffect?.(err);
-      throw err;
-    }
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...creationHeaders,
+          ...headers,
+        },
+        body: JSON.stringify({
+          query: type !== 'query' ? type + query : query,
+          variables,
+        }),
+        mode: 'cors',
+      });
 
-    if (!response.ok) {
-      let errorPayload: GraphQLError[];
+      let json: any;
 
-      if (Array.isArray(json?.errors)) {
-        errorPayload = json.errors;
-      } else if (Array.isArray(json)) {
-        errorPayload = json;
+      try {
+        json = await response.json();
+      } catch (err) {}
+
+      if (!response.ok) {
+        let errorPayload: GraphQLError[];
+
+        if (Array.isArray(json?.errors)) {
+          errorPayload = json.errors;
+        } else {
+          errorPayload = [
+            Error(
+              `Network error, received status code ${response.status} ${response.statusText}`
+            ) as GraphQLError,
+          ];
+        }
+
+        if (isNotDismounted.current) {
+          dispatch({
+            type: 'error',
+            payload: errorPayload,
+            stateRef,
+          });
+        }
+
+        onError?.(errorPayload);
+        effects.onErrorEffect?.(errorPayload);
+      } else if (json?.errors) {
+        onError?.(json.errors);
+        effects.onErrorEffect?.(json.errors);
+
+        if (isNotDismounted.current) {
+          dispatch({
+            type: 'error',
+            payload: json.errors,
+            stateRef,
+          });
+        }
       } else {
-        errorPayload = [
-          new GraphQLError(
-            `Network error, received status code ${response.status} ${response.statusText}`
-          ),
-        ];
+        effects.onSuccessEffect?.();
       }
 
-      effects.onErrorEffect?.(errorPayload);
-
-      onError?.(errorPayload);
-
-      if (!isDismounted.current)
+      return json;
+    } catch (err) {
+      effects.onErrorEffect?.(err);
+      if (isNotDismounted.current) {
         dispatch({
           type: 'error',
-          payload: errorPayload,
+          payload: [err],
           stateRef,
         });
-
-      if (json) return json;
-
-      throw errorPayload;
+      }
+      throw err;
     }
-
-    if (json?.errors) {
-      effects.onErrorEffect?.(json.errors);
-
-      const errorGraphqlError = Array.isArray(json.errors) ? json.errors : [];
-
-      onError?.(errorGraphqlError);
-
-      if (!isDismounted.current)
-        dispatch({
-          type: 'error',
-          payload: errorGraphqlError,
-          stateRef,
-        });
-    } else {
-      effects.onSuccessEffect?.();
-    }
-
-    return json;
   }, []);
 };
 
@@ -385,33 +351,6 @@ export const useFetchCallback = <TData, TVariables extends IVariables>(args: {
  * Contains globally accessible and mergeable **gqless-hooks** interfaces.
  */
 declare global {
-  /**
-   * **gqless-hooks** Hooks Pool
-   *
-   * It enables `hookId` hook option and
-   * the hooks are available at **onCompleted**
-   * and `fetchMore`.
-   *
-   * `Please follow this example type signature.`
-   * @example
-   * ```ts
-   * declare global {
-   *    interface gqlessHooksPool {
-   *     query1: {
-   *       data: string[];
-   *       variables: {
-   *         variable1: number;
-   *       };
-   *     };
-   *     query2: {
-   *       data: string;
-   *     };
-   *   }
-   * }
-   * ```
-   */
-  interface gqlessHooksPool {}
-
   /**
    * **gqless-hooks** Shared Cache
    *
@@ -435,55 +374,6 @@ declare global {
    * ```
    */
   interface gqlessSharedCache extends Record<string, any> {}
-}
-
-type gqlessHookVariableTemplate = { variables: IVariables };
-type gqlessHookDataTemplate = { data: unknown };
-
-/**
- * Hooks pool of **gqless-hooks**.
- *
- * Hooks are added based on **hookId**
- */
-export type HooksPool = {
-  [K in keyof gqlessHooksPool]?: Hook<
-    gqlessHooksPool[K] extends gqlessHookDataTemplate
-      ? gqlessHooksPool[K]['data']
-      : unknown,
-    gqlessHooksPool[K] extends gqlessHookVariableTemplate
-      ? gqlessHooksPool[K]['variables']
-      : IVariables
-  >;
-};
-
-/**
- * Hook data inside the Hooks Pool
- */
-export interface Hook<TData, TVariables extends IVariables> {
-  /**
-   * Generic hook callback of the hook
-   */
-  callback: (args?: {
-    variables?: TVariables;
-    fetchPolicy?: FetchPolicy;
-  }) => Promise<Maybe<TData>>;
-  /**
-   * Hook callback using **cache-and-network** fetchPolicy.
-   */
-  refetch: (args?: { variables?: TVariables }) => Promise<Maybe<TData>>;
-  /**
-   * Current hook state.
-   */
-  state: Readonly<{ current: Readonly<IState<TData>> }>;
-  /**
-   * Set hook data
-   *
-   * It can be the new data itself, or a function that receives
-   * the previous data and returns the new data
-   */
-  setData: (
-    data: Maybe<TData> | ((previousData: Maybe<TData>) => Maybe<TData>)
-  ) => void;
 }
 
 export const lazyInitialState = (): IState<any> => {
@@ -618,22 +508,6 @@ export const SharedCache = {
 
   clearCacheKey: (cacheKey: keyof gqlessSharedCache) => {
     delete SharedCache.cacheData[cacheKey];
-  },
-
-  hooksPool: {} as HooksPool,
-
-  subscribeHookPool: (hookId: string | number, hook: Hook<any, any>) => {
-    if (IS_NOT_PRODUCTION) {
-      if (hookId in SharedCache.hooksPool) {
-        console.warn(
-          `Duplicated hook id "${hookId}", previous hook overwriten!`
-        );
-      }
-    }
-    (SharedCache.hooksPool as any)[hookId] = hook;
-    return () => {
-      delete (SharedCache.hooksPool as any)[hookId];
-    };
   },
 };
 
